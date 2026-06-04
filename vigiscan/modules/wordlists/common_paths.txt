@@ -1,0 +1,8 @@
+.env
+.git/
+backup.zip
+config.php
+phpinfo.php
+admin/
+login/
+backup/

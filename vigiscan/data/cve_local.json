@@ -1,0 +1,30 @@
+[
+  {
+    "product": "Apache",
+    "version": "2.4.49",
+    "cve": "CVE-2021-41773",
+    "severity": "Critical",
+    "description": "Path traversal and file disclosure vulnerability in Apache HTTP Server 2.4.49 when access controls are misconfigured."
+  },
+  {
+    "product": "WordPress",
+    "version": "5.8.2",
+    "cve": "CVE-2022-21661",
+    "severity": "High",
+    "description": "SQL injection vulnerability in WordPress core before fixed releases including 5.8.3."
+  },
+  {
+    "product": "WordPress",
+    "version": null,
+    "cve": "CVE-2017-5487",
+    "severity": "Medium",
+    "description": "WordPress REST API user endpoint exposure affecting installations before 4.7.1."
+  },
+  {
+    "product": "OpenSSL",
+    "version": "1.0.1",
+    "cve": "CVE-2014-0160",
+    "severity": "High",
+    "description": "Heartbleed vulnerability allows disclosure of memory contents in affected OpenSSL 1.0.1 releases."
+  }
+]
