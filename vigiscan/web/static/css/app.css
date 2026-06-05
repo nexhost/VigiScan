@@ -101,6 +101,14 @@ body.cyber-body {
   text-decoration: none;
 }
 
+.brand-logo {
+  display: block;
+  height: 58px;
+  max-width: 212px;
+  object-fit: contain;
+  width: 100%;
+}
+
 .sidebar-brand strong {
   display: block;
   line-height: 1.1;
@@ -227,6 +235,17 @@ body.cyber-body {
 .topbar-title {
   color: var(--text);
   font-weight: 800;
+}
+
+.topbar-brand {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.topbar-brand img {
+  height: 34px;
+  width: 34px;
 }
 
 .topbar-actions {
@@ -461,6 +480,27 @@ body.cyber-body {
 
 .chart-panel {
   height: 286px;
+}
+
+.risk-site-list {
+  display: grid;
+  gap: 10px;
+}
+
+.risk-site-item {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 11px 12px;
+}
+
+.risk-site-item strong {
+  color: var(--red);
+  font-size: 1.1rem;
 }
 
 .cyber-table-wrap {
@@ -808,6 +848,14 @@ body.cyber-body {
   margin-bottom: 22px;
 }
 
+.login-brand-logo {
+  display: block;
+  height: 72px;
+  max-width: 270px;
+  object-fit: contain;
+  width: 100%;
+}
+
 .access-strip {
   align-items: center;
   background: #ecfeff;
@@ -825,6 +873,59 @@ body.cyber-body {
 
 .scan-form-panel {
   max-width: 860px;
+}
+
+.scan-form-panel .scan-launch-form {
+  display: grid;
+}
+
+.scan-form-main {
+  margin-bottom: 18px;
+}
+
+.scan-options-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.scan-option {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 8px;
+  color: #334155;
+  display: flex;
+  gap: 9px;
+  font-weight: 800;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.scan-option input {
+  accent-color: var(--cyan);
+}
+
+.audit-note {
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 8px;
+  color: #1d4ed8;
+  font-weight: 800;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+}
+
+.scan-start-btn {
+  animation: glowPulse 2.2s ease-in-out infinite;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 24px;
 }
 
 .owasp-summary-grid {
@@ -1064,6 +1165,13 @@ body.cyber-body {
   box-shadow: var(--shadow-soft);
 }
 
+.app-footer {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin-top: 34px;
+  text-align: center;
+}
+
 .scan-loader {
   align-items: center;
   background: rgba(248, 250, 252, 0.76);
@@ -1204,7 +1312,8 @@ body.cyber-body {
   }
 
   .owasp-grid,
-  .owasp-summary-grid {
+  .owasp-summary-grid,
+  .settings-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1244,7 +1353,8 @@ body.cyber-body {
 
   .owasp-card-head,
   .owasp-columns,
-  .cve-detail-grid {
+  .cve-detail-grid,
+  .scan-options-grid {
     grid-template-columns: 1fr;
   }
 

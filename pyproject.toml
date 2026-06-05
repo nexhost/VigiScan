@@ -54,7 +54,7 @@ include = ["modules*", "data*", "vigiscan*"]
 [tool.setuptools.package-data]
 "modules.wordlists" = ["*.txt"]
 "data" = ["*.json"]
-"vigiscan.web" = ["templates/*.html", "static/css/*.css", "static/js/*.js"]
+"vigiscan.web" = ["templates/*.html", "static/css/*.css", "static/js/*.js", "static/img/*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

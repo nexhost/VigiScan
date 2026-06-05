@@ -135,6 +135,8 @@ def test_save_reports_writes_txt_json_and_html(tmp_path):
     assert "Update Apache and review access controls." in html
     assert "Clasificacion OWASP Top 10 2025" in html
     assert "A03: Software Supply Chain Failures" in html
+    assert "Desarrollado por Kendry Rosario" in html
+    assert "Exportacion JSON" in html
 
 
 def test_render_html_escapes_untrusted_values():

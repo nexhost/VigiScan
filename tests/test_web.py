@@ -80,7 +80,7 @@ def fake_unavailable_capture(
     )
 
 
-def fake_report(target_url: str):
+def fake_report(target_url: str, **kwargs):
     return {
         "generated_at": "2026-06-04T20:00:00+00:00",
         "target_url": target_url,
@@ -171,6 +171,80 @@ def test_admin_can_login_and_view_dashboard(client):
 
     assert response.status_code == 200
     assert b"Dashboard" in response.data
+
+
+def test_login_updates_last_access(client, app):
+    login(client)
+
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").one()
+        assert admin.last_login_at is not None
+
+
+def test_user_can_update_profile_settings(client, app):
+    login(client)
+    response = client.post(
+        "/settings",
+        data={
+            "profile-email": "admin@example.com",
+            "profile-display_name": "SOC Admin",
+            "profile-submit_profile": "Guardar perfil",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Perfil actualizado correctamente." in response.data
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").one()
+        assert admin.email == "admin@example.com"
+        assert admin.display_name == "SOC Admin"
+
+
+def test_user_can_change_password(client, app):
+    login(client)
+    response = client.post(
+        "/settings",
+        data={
+            "password-current_password": "admin",
+            "password-new_password": "new-admin-pass",
+            "password-confirm_password": "new-admin-pass",
+            "password-submit_password": "Cambiar contrasena",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Contrasena actualizada correctamente." in response.data
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").one()
+        assert admin.check_password("new-admin-pass") is True
+
+
+def test_settings_rejects_invalid_email_and_wrong_current_password(client):
+    login(client)
+    email_response = client.post(
+        "/settings",
+        data={
+            "profile-email": "not-an-email",
+            "profile-display_name": "Admin",
+            "profile-submit_profile": "Guardar perfil",
+        },
+        follow_redirects=True,
+    )
+    password_response = client.post(
+        "/settings",
+        data={
+            "password-current_password": "wrong",
+            "password-new_password": "new-admin-pass",
+            "password-confirm_password": "new-admin-pass",
+            "password-submit_password": "Cambiar contrasena",
+        },
+        follow_redirects=True,
+    )
+
+    assert b"Ingresa un correo valido." in email_response.data
+    assert b"La contrasena actual no es correcta." in password_response.data
 
 
 def test_logged_in_user_can_create_scan(client, app, monkeypatch):

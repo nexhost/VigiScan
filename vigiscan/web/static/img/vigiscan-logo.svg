@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 96" role="img" aria-labelledby="title desc">
+  <title id="title">VigiScan</title>
+  <desc id="desc">Escudo moderno con globo digital y radar</desc>
+  <defs>
+    <linearGradient id="shield" x1="20" x2="92" y1="8" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="text" x1="112" x2="290" y1="24" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#0891b2"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#shield)" d="M56 8 96 22v28c0 24-15.8 37.4-40 44C31.8 87.4 16 74 16 50V22L56 8Z"/>
+  <path fill="#fff" fill-opacity=".22" d="M56 15 88 26v23c0 18.9-11.3 29.8-32 36-20.7-6.2-32-17.1-32-36V26l32-11Z"/>
+  <circle cx="56" cy="48" r="22" fill="#ecfeff" opacity=".95"/>
+  <path fill="none" stroke="#0891b2" stroke-width="3" d="M34 48h44M56 26c8 7 12 14.4 12 22S64 63 56 70M56 26c-8 7-12 14.4-12 22s4 15 12 22"/>
+  <circle cx="56" cy="48" r="21" fill="none" stroke="#2563eb" stroke-width="3"/>
+  <path fill="none" stroke="#06b6d4" stroke-linecap="round" stroke-width="4" d="m72 64 13 13"/>
+  <text x="112" y="45" fill="url(#text)" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800">VigiScan</text>
+  <text x="114" y="70" fill="#64748b" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700">Defensive Web Security Scanner</text>
+</svg>

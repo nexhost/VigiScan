@@ -17,17 +17,33 @@
     <span>Objetivo autorizado</span>
     <small>HTTP/HTTPS</small>
   </div>
+  <div class="audit-note">
+    Ejecuta escaneos solo sobre activos propios o con autorizacion explicita.
+  </div>
   <form class="scan-launch-form" method="post" novalidate>
     {{ form.hidden_tag() }}
-    <div class="mb-4">
+    <div class="scan-form-main">
       {{ form.target_url.label(class="form-label") }}
       {{ form.target_url(class="form-control cyber-input scan-url-input", placeholder="https://example.com") }}
       {% for error in form.target_url.errors %}
       <div class="invalid-feedback d-block">{{ error }}</div>
       {% endfor %}
     </div>
+    <div class="scan-options-grid">
+      <div>
+        {{ form.spider_depth.label(class="form-label") }}
+        {{ form.spider_depth(class="form-control cyber-input", min="0", max="3") }}
+        {% for error in form.spider_depth.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <label class="scan-option">{{ form.enable_passive_scan() }} <span>Passive scan</span></label>
+      <label class="scan-option">{{ form.enable_screenshot() }} <span>Screenshot</span></label>
+      <label class="scan-option">{{ form.enable_owasp_mapping() }} <span>OWASP mapping</span></label>
+      <label class="scan-option">{{ form.enable_cve_lookup() }} <span>CVE lookup</span></label>
+    </div>
     <div class="d-flex flex-wrap gap-2">
-      {{ form.submit(class="btn btn-glow") }}
+      {{ form.submit(class="btn btn-glow scan-start-btn") }}
       <a class="btn btn-ghost" href="{{ url_for('main.dashboard') }}">Volver al dashboard</a>
     </div>
   </form>

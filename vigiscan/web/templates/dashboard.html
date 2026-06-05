@@ -29,45 +29,89 @@
   <div class="metric-card risk-total animate-in">
     <div class="metric-label">Total de escaneos</div>
     <div class="metric-value">{{ total_scans }}</div>
-    <div class="metric-caption">Inventario evaluado</div>
+    <div class="metric-caption">Inventario evaluado · Riesgo alto: {{ risk_counts.Alto }}</div>
     <div class="metric-line"></div>
   </div>
   <div class="metric-card metric-high animate-in delay-1">
-    <div class="metric-label">Riesgo alto</div>
-    <div class="metric-value">{{ risk_counts.Alto }}</div>
-    <div class="metric-caption">Prioridad inmediata</div>
+    <div class="metric-label">Escaneos esta semana</div>
+    <div class="metric-value">{{ dashboard_stats.scans_this_week }}</div>
+    <div class="metric-caption">Actividad reciente</div>
     <div class="risk-signal risk-high"></div>
   </div>
   <div class="metric-card metric-medium animate-in delay-2">
-    <div class="metric-label">Riesgo medio</div>
-    <div class="metric-value">{{ risk_counts.Medio }}</div>
-    <div class="metric-caption">Revision recomendada</div>
+    <div class="metric-label">Hallazgos criticos</div>
+    <div class="metric-value">{{ dashboard_stats.critical_findings }}</div>
+    <div class="metric-caption">Alertas Critical</div>
     <div class="risk-signal risk-medium"></div>
   </div>
   <div class="metric-card metric-low animate-in delay-3">
-    <div class="metric-label">Riesgo bajo</div>
-    <div class="metric-value">{{ risk_counts.Bajo }}</div>
-    <div class="metric-caption">Postura estable</div>
+    <div class="metric-label">Hallazgos altos</div>
+    <div class="metric-value">{{ dashboard_stats.high_findings }}</div>
+    <div class="metric-caption">Alertas High</div>
     <div class="risk-signal risk-low"></div>
+  </div>
+  <div class="metric-card animate-in">
+    <div class="metric-label">CVE detectadas</div>
+    <div class="metric-value">{{ dashboard_stats.cve_detected }}</div>
+    <div class="metric-caption">Base local JSON</div>
+  </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">Promedio de riesgo</div>
+    <div class="metric-value">{{ dashboard_stats.average_risk }}</div>
+    <div class="metric-caption">Score medio</div>
+  </div>
+  <div class="metric-card animate-in delay-2">
+    <div class="metric-label">Ultimo escaneo</div>
+    <div class="metric-date">{{ dashboard_stats.last_scan }}</div>
+  </div>
+  <div class="metric-card animate-in delay-3">
+    <div class="metric-label">Tecnologias unicas</div>
+    <div class="metric-value">{{ dashboard_stats.unique_technologies }}</div>
+    <div class="metric-caption">Fingerprinting</div>
   </div>
 </section>
 
 <section class="row g-4 mb-4">
-  <div class="col-lg-5">
+  <div class="col-lg-4">
     <div class="glass-panel h-100 animate-in delay-1">
       <div class="panel-heading">
-        <span>Riesgos por severidad</span>
-        <small>Risk posture</small>
+        <span>Escaneos por dia</span>
+        <small>7 dias</small>
       </div>
       <div class="chart-panel">
-        <canvas id="severityChart" aria-label="Riesgos por severidad"></canvas>
+        <canvas id="scansByDayChart" aria-label="Escaneos por dia"></canvas>
       </div>
     </div>
   </div>
-  <div class="col-lg-7">
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading">
+        <span>Hallazgos por severidad</span>
+        <small>Passive scan</small>
+      </div>
+      <div class="chart-panel">
+        <canvas id="findingsSeverityChart" aria-label="Hallazgos por severidad"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading">
+        <span>Riesgo promedio semanal</span>
+        <small>Score</small>
+      </div>
+      <div class="chart-panel">
+        <canvas id="weeklyRiskChart" aria-label="Riesgo promedio semanal"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-4">
     <div class="glass-panel h-100 animate-in delay-2">
       <div class="panel-heading">
-        <span>Tecnologias mas detectadas</span>
+        <span>Top 10 tecnologias</span>
         <small>Fingerprinting</small>
       </div>
       <div class="chart-panel">
@@ -75,7 +119,63 @@
       </div>
     </div>
   </div>
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading">
+        <span>Top OWASP</span>
+        <small>2025</small>
+      </div>
+      <div class="chart-panel">
+        <canvas id="owaspChart" aria-label="Top OWASP categorias detectadas"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading">
+        <span>CVE por severidad</span>
+        <small>Local DB</small>
+      </div>
+      <div class="chart-panel">
+        <canvas id="cveSeverityChart" aria-label="CVE por severidad"></canvas>
+      </div>
+    </div>
+  </div>
 </section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="glass-panel h-100 animate-in delay-3">
+      <div class="panel-heading">
+        <span>Tendencia de riesgos altos</span>
+        <small>7 dias</small>
+      </div>
+      <div class="chart-panel">
+        <canvas id="highRiskTrendChart" aria-label="Tendencia de riesgos altos"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="glass-panel h-100 animate-in delay-3">
+      <div class="panel-heading">
+        <span>Sitios con mayor riesgo</span>
+        <small>Top 5</small>
+      </div>
+      <div class="risk-site-list">
+        {% for site in top_risk_sites %}
+        <div class="risk-site-item">
+          <span class="text-break">{{ site.target }}</span>
+          <strong>{{ site.score }}</strong>
+        </div>
+        {% else %}
+        <div class="text-secondary">Sin sitios evaluados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<canvas id="severityChart" class="d-none" aria-hidden="true"></canvas>
 
 <section class="glass-panel animate-in delay-3">
   <div class="panel-heading">
@@ -162,11 +262,17 @@
 <script>
   const severityData = {{ severity_chart | tojson }};
   const technologyData = {{ technology_chart | tojson }};
+  const scansByDayData = {{ scans_by_day_chart | tojson }};
+  const findingsSeverityData = {{ findings_severity_chart | tojson }};
+  const weeklyRiskData = {{ weekly_risk_chart | tojson }};
+  const owaspData = {{ owasp_chart | tojson }};
+  const cveSeverityData = {{ cve_severity_chart | tojson }};
+  const highRiskTrendData = {{ high_risk_trend_chart | tojson }};
 
   Chart.defaults.color = "#64748b";
   Chart.defaults.borderColor = "rgba(37, 99, 235, 0.14)";
 
-  new Chart(document.getElementById("severityChart"), {
+  new Chart(document.getElementById("severityChart") || document.createElement("canvas"), {
     type: "doughnut",
     data: {
       labels: severityData.labels,
@@ -186,6 +292,52 @@
       }
     }
   });
+
+  function lineChart(id, data, label, color) {
+    new Chart(document.getElementById(id), {
+      type: "line",
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label,
+          data: data.values,
+          borderColor: color,
+          backgroundColor: `${color}22`,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.35
+        }]
+      },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+  }
+
+  function barChart(id, data, label, color) {
+    new Chart(document.getElementById(id), {
+      type: "bar",
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label,
+          data: data.values,
+          backgroundColor: color,
+          borderRadius: 8
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  lineChart("scansByDayChart", scansByDayData, "Escaneos", "#2563eb");
+  barChart("findingsSeverityChart", findingsSeverityData, "Hallazgos", "rgba(239, 68, 68, 0.68)");
+  lineChart("weeklyRiskChart", weeklyRiskData, "Riesgo promedio", "#06b6d4");
+  barChart("owaspChart", owaspData, "Categorias", "rgba(37, 99, 235, 0.68)");
+  barChart("cveSeverityChart", cveSeverityData, "CVE", "rgba(245, 158, 11, 0.72)");
+  lineChart("highRiskTrendChart", highRiskTrendData, "Riesgos altos", "#ef4444");
 
   new Chart(document.getElementById("technologyChart"), {
     type: "bar",

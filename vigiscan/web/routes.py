@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -31,8 +31,10 @@ from modules.owasp_classifier import (
 from modules.tech_detect import analyze_technologies
 from report import ReportDocument, build_report, save_report
 from scanner import ScanRequest, ScannerConfig, create_scanner
+from vigiscan.modules.passive_scan import analyze_passive
 from vigiscan.modules.screenshot import capture_site_screenshot
-from vigiscan.web.forms import LoginForm, ScanForm
+from vigiscan.modules.spider import SpiderConfig, crawl_site
+from vigiscan.web.forms import LoginForm, PasswordChangeForm, ProfileForm, ScanForm
 from vigiscan.web.models import Scan, User, db
 
 bp = Blueprint("main", __name__)
@@ -51,12 +53,14 @@ def dashboard():
         "Medio": Scan.query.filter_by(risk_level="Medio").count(),
         "Bajo": Scan.query.filter_by(risk_level="Bajo").count(),
     }
-    top_technologies = detected_technology_counts(limit=6)
+    top_technologies = detected_technology_counts(limit=10)
+    dashboard_stats = build_dashboard_stats(all_scans)
     return render_template(
         "dashboard.html",
         scans=scans,
         total_scans=total_scans,
         risk_counts=risk_counts,
+        dashboard_stats=dashboard_stats,
         severity_chart={
             "labels": list(risk_counts.keys()),
             "values": list(risk_counts.values()),
@@ -65,6 +69,13 @@ def dashboard():
             "labels": [item["name"] for item in top_technologies],
             "values": [item["count"] for item in top_technologies],
         },
+        scans_by_day_chart=dashboard_stats["scans_by_day"],
+        findings_severity_chart=dashboard_stats["findings_by_severity"],
+        weekly_risk_chart=dashboard_stats["weekly_risk"],
+        owasp_chart=dashboard_stats["owasp_top"],
+        cve_severity_chart=dashboard_stats["cve_by_severity"],
+        high_risk_trend_chart=dashboard_stats["high_risk_trend"],
+        top_risk_sites=dashboard_stats["top_risk_sites"],
         owasp_filters=available_owasp_filters(),
         selected_owasp=selected_owasp,
         scan_owasp_categories={
@@ -83,6 +94,8 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
+            user.last_login_at = datetime.now(UTC)
+            db.session.commit()
             login_user(user)
             return redirect(url_for("main.dashboard"))
         flash("Credenciales invalidas.", "danger")
@@ -101,6 +114,7 @@ def logout():
 def scan_new():
     form = ScanForm()
     if form.validate_on_submit():
+        options = scan_options_from_form(form)
         scan = Scan(
             target_url=form.target_url.data.strip(),
             status="En ejecucion",
@@ -109,7 +123,7 @@ def scan_new():
         db.session.add(scan)
         db.session.commit()
 
-        run_vigiscan_scan(scan)
+        run_vigiscan_scan(scan, options=options)
         db.session.commit()
 
         if scan.status == "Completado":
@@ -118,6 +132,41 @@ def scan_new():
             flash("El escaneo no pudo completarse. Revisa el detalle.", "danger")
         return redirect(url_for("main.scan_detail", scan_id=scan.id))
     return render_template("scan_new.html", form=form)
+
+
+@bp.route("/settings", methods=("GET", "POST"))
+@login_required
+def settings():
+    profile_form = ProfileForm(prefix="profile")
+    password_form = PasswordChangeForm(prefix="password")
+
+    if request.method == "GET":
+        profile_form.email.data = current_user.email or ""
+        profile_form.display_name.data = current_user.display_name or ""
+
+    if profile_form.submit_profile.data and profile_form.validate_on_submit():
+        current_user.email = (profile_form.email.data or "").strip() or None
+        current_user.display_name = (
+            (profile_form.display_name.data or "").strip() or None
+        )
+        db.session.commit()
+        flash("Perfil actualizado correctamente.", "success")
+        return redirect(url_for("main.settings"))
+
+    if password_form.submit_password.data and password_form.validate_on_submit():
+        if not current_user.check_password(password_form.current_password.data):
+            flash("La contrasena actual no es correcta.", "danger")
+        else:
+            current_user.set_password(password_form.new_password.data)
+            db.session.commit()
+            flash("Contrasena actualizada correctamente.", "success")
+            return redirect(url_for("main.settings"))
+
+    return render_template(
+        "settings.html",
+        profile_form=profile_form,
+        password_form=password_form,
+    )
 
 
 @bp.get("/scans/<int:scan_id>")
@@ -223,30 +272,43 @@ def owasp():
     return render_template("owasp.html")
 
 
-def run_vigiscan_scan(scan: Scan) -> None:
+def run_vigiscan_scan(scan: Scan, *, options: dict[str, Any] | None = None) -> None:
     """Run the existing VigiScan engine and persist report metadata."""
+    scan_options = options or default_scan_options()
     try:
-        report_doc = execute_scan(scan.target_url)
+        report_doc = execute_scan(scan.target_url, options=scan_options)
         report_dir = Path(str(current_app.config["VIGISCAN_REPORT_DIR"]))
-        screenshot_result = capture_site_screenshot(
-            scan.target_url,
-            report_dir / "screenshots",
-            basename=f"scan-{scan.id}",
-        )
-        screenshot_data = screenshot_result.to_dict()
-        if screenshot_result.path:
-            screenshot_path = Path(screenshot_result.path)
-            try:
-                screenshot_data["relative_path"] = str(
-                    screenshot_path.relative_to(report_dir)
-                ).replace("\\", "/")
-            except ValueError:
-                screenshot_data["relative_path"] = screenshot_path.name
-        report_doc["screenshot"] = screenshot_data
-        report_doc["owasp_findings"] = classify_owasp_findings(
-            report_doc["target_url"],
-            report_doc["modules"],
-        )
+        report_doc["scan_options"] = scan_options
+        if scan_options["screenshot"]:
+            screenshot_result = capture_site_screenshot(
+                scan.target_url,
+                report_dir / "screenshots",
+                basename=f"scan-{scan.id}",
+            )
+            screenshot_data = screenshot_result.to_dict()
+            if screenshot_result.path:
+                screenshot_path = Path(screenshot_result.path)
+                try:
+                    screenshot_data["relative_path"] = str(
+                        screenshot_path.relative_to(report_dir)
+                    ).replace("\\", "/")
+                except ValueError:
+                    screenshot_data["relative_path"] = screenshot_path.name
+            report_doc["screenshot"] = screenshot_data
+        else:
+            report_doc["screenshot"] = {
+                "ok": False,
+                "path": None,
+                "message": "captura no disponible",
+                "engine": None,
+            }
+        if scan_options["owasp_mapping"]:
+            report_doc["owasp_findings"] = classify_owasp_findings(
+                report_doc["target_url"],
+                report_doc["modules"],
+            )
+        else:
+            report_doc["owasp_findings"] = []
         report_path = save_report(report_doc, "html", output_dir=report_dir)
     except Exception as exc:
         scan.status = "Fallido"
@@ -265,8 +327,13 @@ def run_vigiscan_scan(scan: Scan) -> None:
     scan.error_message = None
 
 
-def execute_scan(target_url: str) -> ReportDocument:
+def execute_scan(
+    target_url: str,
+    *,
+    options: dict[str, Any] | None = None,
+) -> ReportDocument:
     """Execute scanner, analysis modules, CVE lookup, and report building."""
+    scan_options = options or default_scan_options()
     scanner_config = ScannerConfig()
     directory_config = DirectoryCheckConfig()
     scan_result = create_scanner(scanner_config).scan(ScanRequest(url=target_url))
@@ -276,7 +343,17 @@ def execute_scan(target_url: str) -> ReportDocument:
 
     headers_report = analyze_headers(scan_result)
     technologies_report = analyze_technologies(scan_result)
-    cve_report = check_tech_report(technologies_report)
+    cve_report = (
+        check_tech_report(technologies_report)
+        if scan_options["cve_lookup"]
+        else {
+            "module": "cve_checker",
+            "ok": True,
+            "source": "disabled",
+            "checked": [],
+            "matches": [],
+        }
+    )
     directories_report = analyze_directories(scan_result, config=directory_config)
     surface_report = analyze_surface_signals(scan_result)
     modules = {
@@ -286,13 +363,28 @@ def execute_scan(target_url: str) -> ReportDocument:
         "directories": directories_report,
         "surface": surface_report,
     }
+    if int(scan_options["spider_depth"]) > 0:
+        modules["spider"] = crawl_site(
+            target_url,
+            config=SpiderConfig(
+                max_depth=int(scan_options["spider_depth"]),
+                max_urls=20,
+            ),
+        )
+    if scan_options["passive_scan"]:
+        modules["passive_scan"] = analyze_passive(
+            scan_result,
+            headers_report=headers_report,
+            directories_report=directories_report,
+        )
     report_doc = build_report(
         target_url=target_url,
         modules=modules,
     )
-    report_doc["owasp_findings"] = classify_owasp_findings(
-        report_doc["target_url"],
-        report_doc["modules"],
+    report_doc["owasp_findings"] = (
+        classify_owasp_findings(report_doc["target_url"], report_doc["modules"])
+        if scan_options["owasp_mapping"]
+        else []
     )
     return report_doc
 
@@ -352,6 +444,213 @@ def detected_technology_counts(limit: int = 6) -> list[dict[str, int | str]]:
         {"name": name, "count": count}
         for name, count in ranked[:limit]
     ]
+
+
+def default_scan_options() -> dict[str, Any]:
+    """Return default web scan options."""
+    return {
+        "spider_depth": 1,
+        "passive_scan": True,
+        "screenshot": True,
+        "owasp_mapping": True,
+        "cve_lookup": True,
+    }
+
+
+def build_dashboard_stats(scans: list[Scan]) -> dict[str, Any]:
+    """Build dashboard cards and chart datasets from stored scans."""
+    now = datetime.now(UTC)
+    week_start = now - timedelta(days=7)
+    completed_scores = [scan.score for scan in scans if scan.score is not None]
+    technologies = {
+        str(tech.get("name"))
+        for scan in scans
+        for tech in scan_findings(scan)["technologies"]
+        if tech.get("name")
+    }
+    cve_matches = [
+        cve
+        for scan in scans
+        for cve in scan_findings(scan)["cves"]
+    ]
+    alerts = [
+        alert
+        for scan in scans
+        for alert in scan_alerts(scan)
+    ]
+    owasp_findings = [
+        finding
+        for scan in scans
+        for finding in scan_owasp_findings(scan)
+    ]
+    return {
+        "scans_this_week": sum(
+            1 for scan in scans if _aware_datetime(scan.created_at) >= week_start
+        ),
+        "critical_findings": sum(
+            1 for alert in alerts if alert.get("severity") == "Critical"
+        ),
+        "high_findings": sum(1 for alert in alerts if alert.get("severity") == "High"),
+        "cve_detected": len(cve_matches),
+        "average_risk": round(
+            sum(completed_scores) / len(completed_scores), 1
+        )
+        if completed_scores
+        else 0,
+        "last_scan": scans[0].created_at.strftime("%Y-%m-%d %H:%M") if scans else "-",
+        "unique_technologies": len(technologies),
+        "scans_by_day": chart_scans_by_day(scans),
+        "findings_by_severity": chart_findings_by_severity(alerts),
+        "weekly_risk": chart_weekly_risk(scans),
+        "owasp_top": chart_owasp_top(owasp_findings),
+        "cve_by_severity": chart_cve_by_severity(cve_matches),
+        "high_risk_trend": chart_high_risk_trend(scans),
+        "top_risk_sites": [
+            {
+                "target": scan.target_url,
+                "score": scan.score or 0,
+                "risk": scan.risk_level or "-",
+            }
+            for scan in sorted(
+                scans,
+                key=lambda item: item.score or 0,
+                reverse=True,
+            )[:5]
+        ],
+    }
+
+
+def chart_scans_by_day(scans: list[Scan]) -> dict[str, list[Any]]:
+    days = [
+        (datetime.now(UTC) - timedelta(days=offset)).date()
+        for offset in range(6, -1, -1)
+    ]
+    counts = {day.isoformat(): 0 for day in days}
+    for scan in scans:
+        day = _aware_datetime(scan.created_at).date().isoformat()
+        if day in counts:
+            counts[day] += 1
+    return {"labels": list(counts.keys()), "values": list(counts.values())}
+
+
+def chart_findings_by_severity(alerts: list[dict[str, Any]]) -> dict[str, list[Any]]:
+    labels = ["Critical", "High", "Medium", "Low", "Informational"]
+    counts = {label: 0 for label in labels}
+    for alert in alerts:
+        severity = str(alert.get("severity"))
+        if severity in counts:
+            counts[severity] += 1
+    return {"labels": labels, "values": [counts[label] for label in labels]}
+
+
+def chart_weekly_risk(scans: list[Scan]) -> dict[str, list[Any]]:
+    weeks = [
+        (datetime.now(UTC) - timedelta(weeks=offset)).isocalendar()
+        for offset in range(5, -1, -1)
+    ]
+    labels = [f"{year}-W{week:02d}" for year, week, _weekday in weeks]
+    buckets: dict[str, list[int]] = {label: [] for label in labels}
+    for scan in scans:
+        if scan.score is None:
+            continue
+        year, week, _weekday = _aware_datetime(scan.created_at).isocalendar()
+        label = f"{year}-W{week:02d}"
+        if label in buckets:
+            buckets[label].append(scan.score)
+    values = [
+        round(sum(scores) / len(scores), 1) if scores else 0
+        for scores in buckets.values()
+    ]
+    return {"labels": labels, "values": values}
+
+
+def chart_owasp_top(findings: list[dict[str, Any]]) -> dict[str, list[Any]]:
+    counts: dict[str, int] = {}
+    for finding in findings:
+        category_id = finding.get("category_id")
+        if isinstance(category_id, str):
+            counts[category_id] = counts.get(category_id, 0) + 1
+    ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:10]
+    return {
+        "labels": [item[0] for item in ranked],
+        "values": [item[1] for item in ranked],
+    }
+
+
+def chart_cve_by_severity(cves: list[dict[str, Any]]) -> dict[str, list[Any]]:
+    counts: dict[str, int] = {}
+    for cve in cves:
+        severity = str(cve.get("severity") or "Unknown")
+        counts[severity] = counts.get(severity, 0) + 1
+    ranked = sorted(counts.items(), key=lambda item: item[0])
+    return {
+        "labels": [item[0] for item in ranked],
+        "values": [item[1] for item in ranked],
+    }
+
+
+def chart_high_risk_trend(scans: list[Scan]) -> dict[str, list[Any]]:
+    days = [
+        (datetime.now(UTC) - timedelta(days=offset)).date()
+        for offset in range(6, -1, -1)
+    ]
+    counts = {day.isoformat(): 0 for day in days}
+    for scan in scans:
+        day = _aware_datetime(scan.created_at).date().isoformat()
+        if day in counts and scan.risk_level == "Alto":
+            counts[day] += 1
+    return {"labels": list(counts.keys()), "values": list(counts.values())}
+
+
+def scan_alerts(scan: Scan) -> list[dict[str, Any]]:
+    """Return passive scan alerts for a stored scan."""
+    report_data = scan.report_data or {}
+    modules = report_data.get("modules") if isinstance(report_data, dict) else None
+    if not isinstance(modules, dict):
+        return []
+    passive = modules.get("passive_scan")
+    if not isinstance(passive, dict):
+        return []
+    return _dict_items(passive.get("alerts"))
+
+
+def _aware_datetime(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def scan_options_from_form(form: ScanForm) -> dict[str, Any]:
+    """Build scan options, preserving defaults for compact dashboard submits."""
+    defaults = default_scan_options()
+    submitted = request.form
+    return {
+        "spider_depth": int(
+            form.spider_depth.data
+            if "spider_depth" in submitted and form.spider_depth.data is not None
+            else defaults["spider_depth"]
+        ),
+        "passive_scan": (
+            form.enable_passive_scan.data
+            if "enable_passive_scan" in submitted
+            else defaults["passive_scan"]
+        ),
+        "screenshot": (
+            form.enable_screenshot.data
+            if "enable_screenshot" in submitted
+            else defaults["screenshot"]
+        ),
+        "owasp_mapping": (
+            form.enable_owasp_mapping.data
+            if "enable_owasp_mapping" in submitted
+            else defaults["owasp_mapping"]
+        ),
+        "cve_lookup": (
+            form.enable_cve_lookup.data
+            if "enable_cve_lookup" in submitted
+            else defaults["cve_lookup"]
+        ),
+    }
 
 
 def filter_scans_by_owasp(scans: list[Scan], category_id: str) -> list[Scan]:

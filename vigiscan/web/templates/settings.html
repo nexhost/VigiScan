@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Configuracion - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Account security</span>
+    <h1>Configuracion</h1>
+    <p>Administra tu perfil, credenciales y datos de acceso del dashboard.</p>
+  </div>
+  <form method="post" action="{{ url_for('main.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-ghost" type="submit">Cerrar sesion</button>
+  </form>
+</section>
+
+<section class="settings-grid">
+  <div class="glass-panel animate-in delay-1">
+    <div class="panel-heading">
+      <span>Perfil</span>
+      <small>{{ current_user.username }}</small>
+    </div>
+    <form method="post" novalidate>
+      {{ profile_form.hidden_tag() }}
+      <div class="mb-3">
+        {{ profile_form.display_name.label(class="form-label") }}
+        {{ profile_form.display_name(class="form-control cyber-input", placeholder="Nombre visible") }}
+        {% for error in profile_form.display_name.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ profile_form.email.label(class="form-label") }}
+        {{ profile_form.email(class="form-control cyber-input", placeholder="correo@ejemplo.com") }}
+        {% for error in profile_form.email.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {{ profile_form.submit_profile(class="btn btn-glow") }}
+    </form>
+  </div>
+
+  <div class="glass-panel animate-in delay-2">
+    <div class="panel-heading">
+      <span>Seguridad</span>
+      <small>Cambio de contrasena</small>
+    </div>
+    <form method="post" novalidate>
+      {{ password_form.hidden_tag() }}
+      <div class="mb-3">
+        {{ password_form.current_password.label(class="form-label") }}
+        {{ password_form.current_password(class="form-control cyber-input", autocomplete="current-password") }}
+        {% for error in password_form.current_password.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ password_form.new_password.label(class="form-label") }}
+        {{ password_form.new_password(class="form-control cyber-input", autocomplete="new-password") }}
+        {% for error in password_form.new_password.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-3">
+        {{ password_form.confirm_password.label(class="form-label") }}
+        {{ password_form.confirm_password(class="form-control cyber-input", autocomplete="new-password") }}
+        {% for error in password_form.confirm_password.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {{ password_form.submit_password(class="btn btn-cyber") }}
+    </form>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <div class="metric-card animate-in">
+    <div class="metric-label">Rol</div>
+    <div class="metric-date">{{ "Administrador" if current_user.is_admin else "Usuario" }}</div>
+  </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">Cuenta creada</div>
+    <div class="metric-date">{{ current_user.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+  </div>
+  <div class="metric-card animate-in delay-2">
+    <div class="metric-label">Ultimo acceso</div>
+    <div class="metric-date">{{ current_user.last_login_at.strftime("%Y-%m-%d %H:%M") if current_user.last_login_at else "-" }}</div>
+  </div>
+  <div class="metric-card animate-in delay-3">
+    <div class="metric-label">Correo</div>
+    <div class="metric-date text-break">{{ current_user.email or "-" }}</div>
+  </div>
+</section>
+{% endblock %}

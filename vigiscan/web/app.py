@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from flask import Flask, current_app
+from sqlalchemy import inspect, text
 
 from vigiscan.web.auth import init_login_manager
 from vigiscan.web.forms import csrf
@@ -51,6 +52,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
 def init_database() -> None:
     """Create database tables and ensure the initial administrator exists."""
     db.create_all()
+    _ensure_user_profile_columns()
     username = str(current_app.config["VIGISCAN_ADMIN_USERNAME"])
     password = str(current_app.config["VIGISCAN_ADMIN_PASSWORD"])
     admin = User.query.filter_by(username=username).first()
@@ -59,6 +61,23 @@ def init_database() -> None:
         admin.set_password(password)
         db.session.add(admin)
         db.session.commit()
+
+
+def _ensure_user_profile_columns() -> None:
+    """Add lightweight profile columns for existing SQLite installations."""
+    inspector = inspect(db.engine)
+    if "users" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("users")}
+    migrations = {
+        "email": "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
+        "display_name": "ALTER TABLE users ADD COLUMN display_name VARCHAR(120)",
+        "last_login_at": "ALTER TABLE users ADD COLUMN last_login_at DATETIME",
+    }
+    for column, statement in migrations.items():
+        if column not in existing:
+            db.session.execute(text(statement))
+    db.session.commit()
 
 
 def main() -> None:

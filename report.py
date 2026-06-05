@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Literal, NotRequired, TypedDict
 
 DEFAULT_REPORTS_DIR = Path("reports")
+DEVELOPER_CREDIT = "Desarrollado por Kendry Rosario"
 
 ReportFormat = Literal["txt", "json", "html"]
 RiskLevel = Literal["Bajo", "Medio", "Alto"]
@@ -242,6 +243,7 @@ def render_html(report: ReportDocument) -> str:
     )
     screenshot_html = _render_html_screenshot(report.get("screenshot"))
     owasp_html = _render_html_owasp(report.get("owasp_findings"))
+    alerts_html = _render_html_alerts(report["modules"].get("passive_scan"))
 
     return f"""<!doctype html>
 <html lang="es">
@@ -279,6 +281,21 @@ def render_html(report: ReportDocument) -> str:
       border-bottom: 1px solid var(--line);
       padding-bottom: 20px;
       margin-bottom: 24px;
+    }}
+    .report-brand {{
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }}
+    .report-logo {{
+      width: 72px;
+      height: 72px;
+      flex: 0 0 auto;
+    }}
+    .credit {{
+      color: var(--muted);
+      font-weight: 700;
+      margin-top: 6px;
     }}
     h1, h2, h3 {{ margin: 0; }}
     h1 {{ font-size: 30px; }}
@@ -394,6 +411,12 @@ def render_html(report: ReportDocument) -> str:
       color: var(--accent);
       overflow-wrap: anywhere;
     }}
+    footer {{
+      color: var(--muted);
+      text-align: center;
+      margin-top: 28px;
+      font-size: 13px;
+    }}
     ul {{ padding-left: 20px; }}
     @media (max-width: 780px) {{
       .grid {{ grid-template-columns: 1fr; }}
@@ -405,9 +428,15 @@ def render_html(report: ReportDocument) -> str:
 <body>
   <main class="shell">
     <header>
-      <h1>VigiScan Security Report</h1>
-      <div class="meta">Target: {target}</div>
-      <div class="meta">Generated: {escape(report['generated_at'])}</div>
+      <div class="report-brand">
+        {_inline_report_logo()}
+        <div>
+          <h1>VigiScan Security Report</h1>
+          <div class="credit">{DEVELOPER_CREDIT}</div>
+          <div class="meta">Target: {target}</div>
+          <div class="meta">Generated: {escape(report['generated_at'])}</div>
+        </div>
+      </div>
     </header>
 
     <div class="grid">
@@ -431,7 +460,13 @@ def render_html(report: ReportDocument) -> str:
 
     {screenshot_html}
     {owasp_html}
+    {alerts_html}
     {modules_html}
+    <section>
+      <h2>Exportacion JSON</h2>
+      <p>El mismo reporte puede descargarse en JSON desde VigiScan Web para auditoria y trazabilidad.</p>
+    </section>
+    <footer>© 2026 VigiScan. {DEVELOPER_CREDIT}.</footer>
   </main>
 </body>
 </html>
@@ -522,6 +557,16 @@ def _summary_highlights(modules: dict[str, Any]) -> list[str]:
     if isinstance(technologies, dict):
         tech_count = len(_as_list(technologies.get("technologies")))
         highlights.append(f"{tech_count} tecnologias detectadas.")
+
+    passive_scan = modules.get("passive_scan")
+    if isinstance(passive_scan, dict):
+        alert_count = len(_as_list(passive_scan.get("alerts")))
+        highlights.append(f"{alert_count} alertas pasivas registradas.")
+
+    spider = modules.get("spider")
+    if isinstance(spider, dict):
+        discovered = int(spider.get("discovered_count", 0))
+        highlights.append(f"{discovered} URLs internas descubiertas por spider.")
 
     return highlights or ["No hay modulos con hallazgos para resumir."]
 
@@ -696,6 +741,36 @@ def _render_html_owasp(findings: Any) -> str:
         ),
     )
     return f"<section><h2>Clasificacion OWASP Top 10 2025</h2>{rows}</section>"
+
+
+def _render_html_alerts(passive_scan: Any) -> str:
+    if not isinstance(passive_scan, dict):
+        return ""
+    rows = _html_rows(
+        ("Alerta", "Severidad", "OWASP", "Recomendacion"),
+        (
+            (
+                item.get("title"),
+                item.get("severity"),
+                item.get("owasp_category") or "-",
+                item.get("recommendation"),
+            )
+            for item in _as_dicts(passive_scan.get("alerts"))
+        ),
+    )
+    return f"<section><h2>Hallazgos por severidad</h2>{rows}</section>"
+
+
+def _inline_report_logo() -> str:
+    return """
+      <svg class="report-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="vg" x1="8" x2="56" y1="6" y2="58" gradientUnits="userSpaceOnUse"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+        <path fill="url(#vg)" d="M32 4 58 14v18c0 15.6-10.3 24.7-26 29C16.3 56.7 6 47.6 6 32V14L32 4Z"/>
+        <circle cx="30" cy="30" r="14" fill="#ecfeff"/>
+        <path fill="none" stroke="#0891b2" stroke-width="3" d="M16 30h28M30 16c5 4.6 7.5 9.2 7.5 14S35 39.4 30 44M30 16c-5 4.6-7.5 9.2-7.5 14S25 39.4 30 44"/>
+        <path fill="none" stroke="#fff" stroke-linecap="round" stroke-width="5" d="m41 41 9 9"/>
+      </svg>
+    """
 
 
 def _render_html_cve_module(title: str, module_report: dict[str, Any]) -> str:
