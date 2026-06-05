@@ -1,0 +1,57 @@
+body {
+  background: #eef2f6;
+  color: #17202a;
+}
+
+.card {
+  border-radius: 8px;
+  border-color: #d8e0e8;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.05);
+}
+
+.navbar-brand {
+  letter-spacing: 0;
+}
+
+th {
+  color: #5f6f7d;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.metric-card {
+  border-left: 4px solid #0d6efd;
+}
+
+.metric-high {
+  border-left-color: #dc3545;
+}
+
+.metric-medium {
+  border-left-color: #ffc107;
+}
+
+.metric-low {
+  border-left-color: #198754;
+}
+
+.metric-label {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.chart-panel {
+  height: 280px;
+}
+
+.scan-target {
+  max-width: 360px;
+}

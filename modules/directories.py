@@ -16,11 +16,11 @@ import requests
 from requests import Response
 from requests.exceptions import RequestException
 
-from vigiscan.scanner import ScanResult
+from scanner import ScanResult
 
 DEFAULT_TIMEOUT_SECONDS = 5.0
 DEFAULT_USER_AGENT = "VigiScan/0.1.0"
-WORDLIST_PACKAGE = "vigiscan.modules.wordlists"
+WORDLIST_PACKAGE = "modules.wordlists"
 WORDLIST_NAME = "common_paths.txt"
 
 ExposureStatus = Literal["Expuesto", "No expuesto", "Error"]

@@ -5,8 +5,8 @@ from typing import cast
 
 from rich.console import Console
 
-from vigiscan.modules.headers import analyze_headers, render_headers_report
-from vigiscan.scanner import ScanResult
+from modules.headers import analyze_headers, render_headers_report
+from scanner import ScanResult
 
 
 def make_scan_result(headers: dict[str, str]) -> ScanResult:

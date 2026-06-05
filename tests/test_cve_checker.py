@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import cast
 
-from vigiscan.modules.cve_checker import (
+from modules.cve_checker import (
     CVERecord,
     check_tech_report,
     check_technologies,
     load_cve_database,
     search_cves,
 )
-from vigiscan.modules.tech_detect import TechDetectReport, TechnologyFinding
+from modules.tech_detect import TechDetectReport, TechnologyFinding
 
 
 def test_load_cve_database_contains_required_examples():

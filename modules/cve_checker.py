@@ -2,7 +2,7 @@
 
 The checker uses a bundled JSON data set and performs deterministic local
 searches. It does not call external vulnerability feeds, so results are only as
-complete as ``vigiscan/data/cve_local.json``.
+complete as ``data/cve_local.json``.
 """
 
 from __future__ import annotations
@@ -11,9 +11,9 @@ import json
 from importlib import resources
 from typing import NotRequired, TypedDict
 
-from vigiscan.modules.tech_detect import TechDetectReport, TechnologyFinding
+from modules.tech_detect import TechDetectReport, TechnologyFinding
 
-DATA_PACKAGE = "vigiscan.data"
+DATA_PACKAGE = "data"
 DATA_FILE = "cve_local.json"
 
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import cast
 
-from vigiscan import cli
-from vigiscan.scanner import ScanResult
+import cli
+from scanner import ScanResult
 
 
 class FakeScanner:

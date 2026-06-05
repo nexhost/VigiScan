@@ -1,7 +1,7 @@
 """HTTP security header analysis module.
 
 The module consumes the normalized ``ScanResult`` produced by
-``vigiscan.scanner``. It detects common browser security headers, classifies
+``scanner``. It detects common browser security headers, classifies
 missing or weak values as ``Alto``, ``Medio`` or ``Bajo``, and can render the
 results as a Rich table for the command line interface.
 """
@@ -15,7 +15,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from vigiscan.scanner import ScanResult
+from scanner import ScanResult
 
 Severity = Literal["Alto", "Medio", "Bajo"]
 HeaderStatus = Literal["Presente", "Ausente", "Debil"]

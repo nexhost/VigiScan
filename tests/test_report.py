@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from vigiscan.report import build_report, render_html, save_reports
+from report import build_report, render_html, save_reports
 
 
 def sample_modules():
@@ -55,7 +55,7 @@ def sample_modules():
         "cve_checker": {
             "module": "cve_checker",
             "ok": True,
-            "source": "vigiscan.data.cve_local.json",
+            "source": "data.cve_local.json",
             "matches": [
                 {
                     "product": "Apache",

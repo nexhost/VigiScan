@@ -23,8 +23,13 @@ classifiers = [
     "Topic :: Security",
 ]
 dependencies = [
+    "Flask>=3.0",
+    "Flask-Login>=0.6",
+    "Flask-SQLAlchemy>=3.1",
+    "Flask-WTF>=1.2",
     "requests>=2.32",
     "rich>=13.7",
+    "SQLAlchemy>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -34,17 +39,23 @@ dev = [
 ]
 
 [project.scripts]
-vigiscan = "vigiscan.cli:main"
+vigiscan = "cli:main"
+vigiscan-web = "vigiscan.web.app:main"
+
+[tool.setuptools]
+py-modules = ["cli", "scanner", "report"]
 
 [tool.setuptools.packages.find]
-include = ["vigiscan*"]
+include = ["modules*", "data*", "vigiscan*"]
 
 [tool.setuptools.package-data]
-"vigiscan.modules.wordlists" = ["*.txt"]
-"vigiscan.data" = ["*.json"]
+"modules.wordlists" = ["*.txt"]
+"data" = ["*.json"]
+"vigiscan.web" = ["templates/*.html", "static/css/*.css", "static/js/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 88

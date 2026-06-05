@@ -4,8 +4,8 @@ from typing import cast
 
 import requests
 
-from vigiscan.modules.directories import analyze_directories, load_wordlist
-from vigiscan.scanner import ScanResult
+from modules.directories import analyze_directories, load_wordlist
+from scanner import ScanResult
 
 
 class FakeResponse:

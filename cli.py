@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Literal, cast
 
@@ -12,19 +13,28 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from vigiscan import __version__
-from vigiscan.modules.cve_checker import check_tech_report
-from vigiscan.modules.directories import DirectoryCheckConfig, analyze_directories
-from vigiscan.modules.headers import analyze_headers
-from vigiscan.modules.tech_detect import analyze_technologies
-from vigiscan.report import (
+from modules.cve_checker import check_tech_report
+from modules.directories import DirectoryCheckConfig, analyze_directories
+from modules.headers import analyze_headers
+from modules.tech_detect import analyze_technologies
+from report import (
     ReportDocument,
     ReportFormat,
     build_report,
     save_report,
     save_reports,
 )
-from vigiscan.scanner import ScanRequest, ScanResult, ScannerConfig, create_scanner
+from scanner import ScanRequest, ScanResult, ScannerConfig, create_scanner
+
+
+def _app_version() -> str:
+    try:
+        return version("vigiscan")
+    except PackageNotFoundError:
+        return "0.1.0"
+
+
+__version__ = _app_version()
 
 REPORT_CHOICES = ("html", "json", "txt", "all")
 ReportChoice = Literal["html", "json", "txt", "all"]

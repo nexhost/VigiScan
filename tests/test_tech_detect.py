@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import cast
 
-from vigiscan.modules.tech_detect import analyze_technologies
-from vigiscan.scanner import ScanResult
+from modules.tech_detect import analyze_technologies
+from scanner import ScanResult
 
 
 def make_scan_result(

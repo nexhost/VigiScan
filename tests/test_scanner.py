@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import requests
 
-from vigiscan.scanner import ScanRequest, Scanner, ScannerConfig
+from scanner import ScanRequest, Scanner, ScannerConfig
 
 
 class FakeResponse:

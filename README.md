@@ -4,8 +4,8 @@ VigiScan is a Python 3.12 command line security scanner scaffold focused on
 small, composable modules and local report generation.
 
 The current version includes an HTTP scanner boundary, security header checks,
-technology detection, common path exposure checks, local CVE lookup, and report
-generation.
+technology detection, common path exposure checks, local CVE lookup, report
+generation, and a Flask web dashboard.
 
 ## Requirements
 
@@ -36,6 +36,33 @@ CLI options:
 - `--report`: output format, one of `html`, `json`, `txt`, or `all`.
 - `--output`: output directory for generated reports.
 - `--verbose`: show detailed execution progress.
+
+## Web Dashboard
+
+Start the dashboard with:
+
+```bash
+vigiscan-web
+```
+
+The first run creates a local SQLite database at `instance/vigiscan.sqlite3`
+and an initial administrator:
+
+- Username: `admin`
+- Password: `admin`
+
+Override the initial account and server settings with environment variables:
+
+- `VIGISCAN_ADMIN_USERNAME`
+- `VIGISCAN_ADMIN_PASSWORD`
+- `VIGISCAN_SECRET_KEY`
+- `VIGISCAN_WEB_HOST`
+- `VIGISCAN_WEB_PORT`
+- `VIGISCAN_WEB_DEBUG`
+
+Dashboard scans run the same VigiScan engine used by the CLI. Each scan stores
+the target URL, score, risk level, timestamp, generated HTML report path, and
+full normalized report data in SQLite.
 
 The scanner provides a normalized structure with:
 
@@ -77,7 +104,7 @@ The directories module checks a small local wordlist of common sensitive paths:
 - `login/`
 - `backup/`
 
-The CVE checker performs local lookups from `vigiscan/data/cve_local.json` and
+The CVE checker performs local lookups from `data/cve_local.json` and
 relates product, version, CVE, severity, and description. The bundled examples
 include Apache `2.4.49`, WordPress, and OpenSSL.
 
@@ -87,18 +114,31 @@ include an executive summary and a normalized risk score from `0` to `100`.
 ## Project Layout
 
 ```text
-.
-|-- pyproject.toml
-|-- README.md
-|-- LICENSE
-|-- reports/
+vigiscan/
+|-- cli.py
+|-- scanner.py
+|-- report.py
+|-- modules/
 |-- vigiscan/
 |   |-- __init__.py
-|   |-- cli.py
-|   |-- report.py
-|   |-- scanner.py
-|   |-- data/
-|   `-- modules/
+|   `-- web/
+|       |-- app.py
+|       |-- models.py
+|       |-- auth.py
+|       |-- routes.py
+|       |-- forms.py
+|       |-- templates/
+|       |   |-- base.html
+|       |   |-- login.html
+|       |   |-- dashboard.html
+|       |   |-- scan_new.html
+|       |   |-- scan_detail.html
+|       |   `-- reports.html
+|       `-- static/
+|           |-- css/
+|           `-- js/
+|-- data/
+|-- reports/
 `-- tests/
 ```
 

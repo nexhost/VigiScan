@@ -1,6 +1,6 @@
 """Technology detection module for VigiScan.
 
-This module consumes the normalized ``ScanResult`` from ``vigiscan.scanner``
+This module consumes the normalized ``ScanResult`` from ``scanner``
 and infers common web technologies from HTTP headers, cookies, meta tags, and
 HTML content. Findings include a name, optional version, numeric confidence,
 and a human-readable confidence level.
@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Literal, TypedDict
 
-from vigiscan.scanner import ScanResult
+from scanner import ScanResult
 
 ConfidenceLevel = Literal["Alto", "Medio", "Bajo"]
 
