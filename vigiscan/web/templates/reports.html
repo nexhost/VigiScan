@@ -3,11 +3,34 @@
 {% block title %}Reportes - VigiScan{% endblock %}
 
 {% block content %}
-<h1 class="h3 mb-4">Reportes</h1>
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Evidence archive</span>
+    <h1>Reportes</h1>
+    <p>Historial de evaluaciones, archivos generados y postura de riesgo.</p>
+  </div>
+  <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">Nuevo escaneo</a>
+</section>
 
-<div class="card">
-  <div class="table-responsive">
-    <table class="table align-middle mb-0">
+<section class="glass-panel animate-in delay-1">
+  <div class="panel-heading">
+    <span>Archivo de evidencias</span>
+    <small>{{ scans|length }} registros</small>
+  </div>
+  <form class="filter-bar" method="get">
+    <label class="form-label mb-0" for="reportsOwaspFilter">Filtrar por OWASP</label>
+    <select class="form-select cyber-input" id="reportsOwaspFilter" name="owasp" onchange="this.form.submit()">
+      <option value="">Todas las categorias</option>
+      {% for option in owasp_filters %}
+      <option value="{{ option.id }}" {% if selected_owasp == option.id %}selected{% endif %}>{{ option.label }}</option>
+      {% endfor %}
+    </select>
+    {% if selected_owasp %}
+    <a class="btn btn-sm btn-ghost" href="{{ url_for('main.reports') }}">Limpiar</a>
+    {% endif %}
+  </form>
+  <div class="table-responsive cyber-table-wrap">
+    <table class="table cyber-table align-middle mb-0">
       <thead>
         <tr>
           <th>Escaneo</th>
@@ -15,6 +38,9 @@
           <th>Estado</th>
           <th>Score</th>
           <th>Riesgo</th>
+          <th>OWASP</th>
+          <th>CVE locales</th>
+          <th>Captura</th>
           <th>Archivo</th>
           <th>Fecha</th>
         </tr>
@@ -22,21 +48,105 @@
       <tbody>
         {% for scan in scans %}
         <tr>
-          <td><a href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">#{{ scan.id }}</a></td>
+          <td><a class="link-cyber" href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">#{{ scan.id }}</a></td>
           <td class="text-break">{{ scan.target_url }}</td>
-          <td><span class="badge text-bg-secondary">{{ scan.status }}</span></td>
+          <td><span class="badge badge-muted">{{ scan.status }}</span></td>
           <td>{{ scan.score if scan.score is not none else "-" }}</td>
-          <td>{{ scan.risk_level or "-" }}</td>
+          <td>
+            {% if scan.risk_level == "Alto" %}
+            <span class="risk-badge risk-badge-high">Alto</span>
+            {% elif scan.risk_level == "Medio" %}
+            <span class="risk-badge risk-badge-medium">Medio</span>
+            {% elif scan.risk_level == "Bajo" %}
+            <span class="risk-badge risk-badge-low">Bajo</span>
+            {% else %}
+            <span class="text-secondary">-</span>
+            {% endif %}
+          </td>
+          <td>
+            {% for category in scan_owasp_categories.get(scan.id, []) %}
+            <span class="owasp-tag">{{ category.id }}</span>
+            {% else %}
+            <span class="text-secondary">-</span>
+            {% endfor %}
+          </td>
+          {% set modules = scan.report_data.get("modules", {}) if scan.report_data else {} %}
+          {% set cve_report = modules.get("cve_checker", {}) %}
+          {% set cves = cve_report.get("matches", []) %}
+          <td>
+            {% for cve in cves %}
+            <span class="risk-badge risk-badge-medium">{{ cve.cve_id or cve.cve }}</span>
+            {% else %}
+            <span class="text-secondary">-</span>
+            {% endfor %}
+          </td>
+          {% set screenshot = screenshots.get(scan.id, {}) %}
+          <td>
+            {% if screenshot.ok %}
+            <img class="report-screenshot-thumb" src="{{ url_for('main.scan_screenshot', scan_id=scan.id) }}" alt="Captura de {{ scan.target_url }}">
+            {% else %}
+            <span class="text-secondary">{{ screenshot.message or "captura no disponible" }}</span>
+            {% endif %}
+          </td>
           <td class="text-break">{{ scan.report_path or "-" }}</td>
           <td>{{ scan.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="7" class="text-secondary">Sin reportes disponibles.</td>
+          <td colspan="10" class="text-secondary">Sin reportes disponibles.</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</div>
+</section>
+
+<section class="glass-panel animate-in delay-2">
+  <div class="panel-heading">
+    <span>Detalle CVE por reporte</span>
+    <small>Base local JSON</small>
+  </div>
+  <div class="cve-stack">
+    {% set cve_state = namespace(found=false) %}
+    {% for scan in scans %}
+      {% set modules = scan.report_data.get("modules", {}) if scan.report_data else {} %}
+      {% set cve_report = modules.get("cve_checker", {}) %}
+      {% set cves = cve_report.get("matches", []) %}
+      {% for cve in cves %}
+      {% set cve_state.found = true %}
+      <article class="cve-detail-card">
+        <div class="cve-detail-head">
+          <div>
+            <span class="eyebrow">Escaneo #{{ scan.id }}</span>
+            <h3>{{ cve.cve_id or cve.cve }}</h3>
+          </div>
+          <span class="risk-badge risk-badge-high">{{ cve.severity }}</span>
+        </div>
+        <div class="cve-detail-grid">
+          <div><span>Producto</span>{{ cve.product }}</div>
+          <div><span>Version afectada</span>{{ cve.affected_version or cve.matched_version or "-" }}</div>
+          <div><span>CVSS</span>{{ cve.cvss if cve.cvss is not none else "-" }}</div>
+          <div><span>CWE</span>{{ cve.cwe or "-" }}</div>
+        </div>
+        <p><strong>Descripcion:</strong> {{ cve.description }}</p>
+        <p><strong>Impacto:</strong> {{ cve.impact or "-" }}</p>
+        <p><strong>Recomendacion:</strong> {{ cve.recommendation or "-" }}</p>
+        <div class="cve-reference-list">
+          <strong>Referencias:</strong>
+          {% for reference in cve.references or [] %}
+          <a href="{{ reference }}" target="_blank" rel="noopener noreferrer">{{ reference }}</a>
+          {% else %}
+          <span class="text-secondary">Sin referencias locales.</span>
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    {% else %}
+    <div class="text-secondary">Sin reportes disponibles.</div>
+    {% endfor %}
+    {% if scans and not cve_state.found %}
+    <div class="text-secondary">Sin CVE locales encontradas en los reportes actuales.</div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

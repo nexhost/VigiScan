@@ -37,6 +37,9 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.4",
 ]
+screenshot = [
+    "playwright>=1.45",
+]
 
 [project.scripts]
 vigiscan = "cli:main"

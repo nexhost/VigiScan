@@ -3,81 +3,113 @@
 {% block title %}Escaneo #{{ scan.id }} - VigiScan{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+<section class="hero-panel glass-panel animate-in">
   <div>
-    <h1 class="h3 mb-1">Escaneo #{{ scan.id }}</h1>
-    <p class="text-secondary mb-0 text-break">{{ scan.target_url }}</p>
+    <span class="eyebrow">Scan detail</span>
+    <h1>Escaneo #{{ scan.id }}</h1>
+    <p class="text-break">{{ scan.target_url }}</p>
   </div>
-  <a class="btn btn-outline-secondary" href="{{ url_for('main.dashboard') }}">Volver</a>
-</div>
+  <div class="hero-actions">
+    <a class="btn btn-ghost" href="{{ url_for('main.scan_download_html', scan_id=scan.id) }}">HTML</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.scan_download_json', scan_id=scan.id) }}">JSON</a>
+    <a class="btn btn-cyber" href="{{ url_for('main.dashboard') }}">Volver</a>
+  </div>
+</section>
 
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="text-secondary small">Score</div>
-        <div class="display-6">{{ scan.score if scan.score is not none else "-" }}</div>
-      </div>
-    </div>
+<section class="metric-grid">
+  <div class="metric-card animate-in">
+    <div class="metric-label">Score</div>
+    <div class="metric-value">{{ scan.score if scan.score is not none else "-" }}</div>
+    <div class="metric-caption">Puntuacion calculada</div>
   </div>
-  <div class="col-md-3">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="text-secondary small">Riesgo</div>
-        <div class="fs-3">{{ scan.risk_level or "-" }}</div>
-      </div>
-    </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">Riesgo</div>
+    {% if scan.risk_level == "Alto" %}
+    <span class="risk-badge risk-badge-high risk-pulse">Alto</span>
+    {% elif scan.risk_level == "Medio" %}
+    <span class="risk-badge risk-badge-medium risk-pulse">Medio</span>
+    {% elif scan.risk_level == "Bajo" %}
+    <span class="risk-badge risk-badge-low risk-pulse">Bajo</span>
+    {% else %}
+    <span class="risk-badge">-</span>
+    {% endif %}
   </div>
-  <div class="col-md-3">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="text-secondary small">Estado</div>
-        <span class="badge text-bg-secondary">{{ scan.status }}</span>
-      </div>
-    </div>
+  <div class="metric-card animate-in delay-2">
+    <div class="metric-label">Estado</div>
+    <span class="badge badge-muted">{{ scan.status }}</span>
+    <div class="metric-caption">Estado del motor</div>
   </div>
-  <div class="col-md-3">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="text-secondary small">Fecha</div>
-        <div>{{ (scan.completed_at or scan.created_at).strftime("%Y-%m-%d %H:%M") }}</div>
-      </div>
-    </div>
+  <div class="metric-card animate-in delay-3">
+    <div class="metric-label">Fecha</div>
+    <div class="metric-date">{{ (scan.completed_at or scan.created_at).strftime("%Y-%m-%d %H:%M") }}</div>
   </div>
-</div>
+</section>
 
 {% if scan.error_message %}
-<div class="alert alert-danger">{{ scan.error_message }}</div>
+<div class="alert glass-alert alert-danger">{{ scan.error_message }}</div>
 {% endif %}
 
-<div class="card mb-4">
-  <div class="card-body">
-    <h2 class="h5">Resumen</h2>
-    <p class="mb-2">{{ scan.summary or "Sin resumen disponible." }}</p>
-    <div class="text-secondary small text-break">Reporte: {{ scan.report_path or "No generado" }}</div>
+<section class="glass-panel mb-4 animate-in delay-1">
+  <div class="panel-heading">
+    <span>Resumen ejecutivo</span>
+    <small class="text-break">{{ scan.report_path or "No generado" }}</small>
   </div>
-</div>
+  <p class="mb-0">{{ scan.summary or "Sin resumen disponible." }}</p>
+</section>
 
-<div class="row g-4">
+<section class="glass-panel mb-4 animate-in delay-2">
+  <div class="panel-heading">
+    <span>Captura visual</span>
+    <small>{{ screenshot.engine or "opcional" }}</small>
+  </div>
+  {% if screenshot.ok %}
+  <img class="scan-screenshot" src="{{ url_for('main.scan_screenshot', scan_id=scan.id) }}" alt="Captura visual del sitio escaneado">
+  {% else %}
+  <div class="screenshot-unavailable">{{ screenshot.message or "captura no disponible" }}</div>
+  {% endif %}
+</section>
+
+<section class="glass-panel mb-4 animate-in delay-2">
+  <div class="panel-heading">
+    <span>Clasificacion OWASP Top 10 2025</span>
+    <small>{{ findings.owasp|length }} hallazgos</small>
+  </div>
+  <div class="table-responsive cyber-table-wrap">
+    <table class="table cyber-table mb-0 align-middle">
+      <thead>
+        <tr>
+          <th>Hallazgo</th>
+          <th>Severidad</th>
+          <th>Categoria OWASP</th>
+          <th>Recomendacion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in findings.owasp %}
+        <tr>
+          <td>{{ item.finding }}</td>
+          <td><span class="risk-badge risk-badge-medium">{{ item.severity }}</span></td>
+          <td><span class="owasp-tag">{{ item.category }}</span></td>
+          <td>{{ item.recommendation }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-secondary">Sin clasificaciones OWASP para este escaneo.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="row g-4">
   <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header bg-white fw-semibold">Headers faltantes o debiles</div>
-      <div class="table-responsive">
-        <table class="table mb-0 align-middle">
-          <thead>
-            <tr>
-              <th>Header</th>
-              <th>Estado</th>
-              <th>Riesgo</th>
-            </tr>
-          </thead>
+    <div class="glass-panel h-100 animate-in">
+      <div class="panel-heading"><span>Headers faltantes o debiles</span></div>
+      <div class="table-responsive cyber-table-wrap">
+        <table class="table cyber-table mb-0 align-middle">
+          <thead><tr><th>Header</th><th>Estado</th><th>Riesgo</th></tr></thead>
           <tbody>
             {% for header in findings.missing_headers %}
-            <tr>
-              <td>{{ header.header }}</td>
-              <td>{{ header.status }}</td>
-              <td>{{ header.severity }}</td>
-            </tr>
+            <tr><td>{{ header.header }}</td><td>{{ header.status }}</td><td>{{ header.severity }}</td></tr>
             {% else %}
             <tr><td colspan="3" class="text-secondary">Sin headers faltantes.</td></tr>
             {% endfor %}
@@ -86,26 +118,15 @@
       </div>
     </div>
   </div>
-
   <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header bg-white fw-semibold">Tecnologias detectadas</div>
-      <div class="table-responsive">
-        <table class="table mb-0 align-middle">
-          <thead>
-            <tr>
-              <th>Tecnologia</th>
-              <th>Version</th>
-              <th>Confianza</th>
-            </tr>
-          </thead>
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading"><span>Tecnologias detectadas</span></div>
+      <div class="table-responsive cyber-table-wrap">
+        <table class="table cyber-table mb-0 align-middle">
+          <thead><tr><th>Tecnologia</th><th>Version</th><th>Confianza</th></tr></thead>
           <tbody>
             {% for tech in findings.technologies %}
-            <tr>
-              <td>{{ tech.name }}</td>
-              <td>{{ tech.version or "-" }}</td>
-              <td>{{ tech.confidence_level }}</td>
-            </tr>
+            <tr><td>{{ tech.name }}</td><td>{{ tech.version or "-" }}</td><td>{{ tech.confidence_level }}</td></tr>
             {% else %}
             <tr><td colspan="3" class="text-secondary">Sin tecnologias detectadas.</td></tr>
             {% endfor %}
@@ -114,26 +135,15 @@
       </div>
     </div>
   </div>
-
   <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header bg-white fw-semibold">Directorios expuestos</div>
-      <div class="table-responsive">
-        <table class="table mb-0 align-middle">
-          <thead>
-            <tr>
-              <th>Ruta</th>
-              <th>HTTP</th>
-              <th>URL</th>
-            </tr>
-          </thead>
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading"><span>Directorios expuestos</span></div>
+      <div class="table-responsive cyber-table-wrap">
+        <table class="table cyber-table mb-0 align-middle">
+          <thead><tr><th>Ruta</th><th>HTTP</th><th>URL</th></tr></thead>
           <tbody>
             {% for directory in findings.exposed_directories %}
-            <tr>
-              <td>{{ directory.path }}</td>
-              <td>{{ directory.status_code }}</td>
-              <td class="text-break">{{ directory.url }}</td>
-            </tr>
+            <tr><td>{{ directory.path }}</td><td>{{ directory.status_code }}</td><td class="text-break">{{ directory.url }}</td></tr>
             {% else %}
             <tr><td colspan="3" class="text-secondary">Sin directorios expuestos.</td></tr>
             {% endfor %}
@@ -142,33 +152,42 @@
       </div>
     </div>
   </div>
-
   <div class="col-lg-6">
-    <div class="card h-100">
-      <div class="card-header bg-white fw-semibold">CVE encontradas</div>
-      <div class="table-responsive">
-        <table class="table mb-0 align-middle">
-          <thead>
-            <tr>
-              <th>CVE</th>
-              <th>Producto</th>
-              <th>Severidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for cve in findings.cves %}
-            <tr>
-              <td>{{ cve.cve }}</td>
-              <td>{{ cve.product }} {{ cve.matched_version or "" }}</td>
-              <td>{{ cve.severity }}</td>
-            </tr>
+    <div class="glass-panel h-100 animate-in delay-3">
+      <div class="panel-heading"><span>CVE encontradas</span></div>
+      <div class="cve-stack">
+        {% for cve in findings.cves %}
+        <article class="cve-detail-card">
+          <div class="cve-detail-head">
+            <div>
+              <span class="eyebrow">CVE ID</span>
+              <h3>{{ cve.cve_id or cve.cve }}</h3>
+            </div>
+            <span class="risk-badge risk-badge-high">{{ cve.severity }}</span>
+          </div>
+          <div class="cve-detail-grid">
+            <div><span>Producto</span>{{ cve.product }}</div>
+            <div><span>Version afectada</span>{{ cve.affected_version or cve.matched_version or "-" }}</div>
+            <div><span>CVSS</span>{{ cve.cvss if cve.cvss is not none else "-" }}</div>
+            <div><span>CWE</span>{{ cve.cwe or "-" }}</div>
+          </div>
+          <p><strong>Descripcion:</strong> {{ cve.description }}</p>
+          <p><strong>Impacto:</strong> {{ cve.impact or "-" }}</p>
+          <p><strong>Recomendacion:</strong> {{ cve.recommendation or "-" }}</p>
+          <div class="cve-reference-list">
+            <strong>Referencias:</strong>
+            {% for reference in cve.references or [] %}
+            <a href="{{ reference }}" target="_blank" rel="noopener noreferrer">{{ reference }}</a>
             {% else %}
-            <tr><td colspan="3" class="text-secondary">Sin CVE encontradas.</td></tr>
+            <span class="text-secondary">Sin referencias locales.</span>
             {% endfor %}
-          </tbody>
-        </table>
+          </div>
+        </article>
+        {% else %}
+        <div class="text-secondary">Sin CVE encontradas.</div>
+        {% endfor %}
       </div>
     </div>
   </div>
-</div>
+</section>
 {% endblock %}

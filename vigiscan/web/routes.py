@@ -12,6 +12,7 @@ from flask import (
     Response,
     current_app,
     flash,
+    request,
     redirect,
     render_template,
     send_file,
@@ -22,9 +23,15 @@ from flask_login import current_user, login_required, login_user, logout_user
 from modules.cve_checker import check_tech_report
 from modules.directories import DirectoryCheckConfig, analyze_directories
 from modules.headers import analyze_headers
+from modules.owasp_classifier import (
+    analyze_surface_signals,
+    available_owasp_filters,
+    classify_owasp_findings,
+)
 from modules.tech_detect import analyze_technologies
 from report import ReportDocument, build_report, save_report
 from scanner import ScanRequest, ScannerConfig, create_scanner
+from vigiscan.modules.screenshot import capture_site_screenshot
 from vigiscan.web.forms import LoginForm, ScanForm
 from vigiscan.web.models import Scan, User, db
 
@@ -34,7 +41,10 @@ bp = Blueprint("main", __name__)
 @bp.get("/")
 @login_required
 def dashboard():
-    scans = Scan.query.order_by(Scan.created_at.desc()).limit(10).all()
+    selected_owasp = request.args.get("owasp", "").strip()
+    all_scans = Scan.query.order_by(Scan.created_at.desc()).all()
+    filtered_scans = filter_scans_by_owasp(all_scans, selected_owasp)
+    scans = filtered_scans[:10]
     total_scans = Scan.query.count()
     risk_counts = {
         "Alto": Scan.query.filter_by(risk_level="Alto").count(),
@@ -54,6 +64,12 @@ def dashboard():
         technology_chart={
             "labels": [item["name"] for item in top_technologies],
             "values": [item["count"] for item in top_technologies],
+        },
+        owasp_filters=available_owasp_filters(),
+        selected_owasp=selected_owasp,
+        scan_owasp_categories={
+            scan.id: scan_owasp_categories(scan)
+            for scan in scans
         },
     )
 
@@ -109,7 +125,12 @@ def scan_new():
 def scan_detail(scan_id: int):
     scan = db.get_or_404(Scan, scan_id)
     findings = scan_findings(scan)
-    return render_template("scan_detail.html", scan=scan, findings=findings)
+    return render_template(
+        "scan_detail.html",
+        scan=scan,
+        findings=findings,
+        screenshot=scan_screenshot_metadata(scan),
+    )
 
 
 @bp.get("/scans/<int:scan_id>/download/html")
@@ -143,16 +164,33 @@ def scan_download_json(scan_id: int):
     )
 
 
+@bp.get("/scans/<int:scan_id>/screenshot")
+@login_required
+def scan_screenshot(scan_id: int):
+    scan = db.get_or_404(Scan, scan_id)
+    path = stored_screenshot_path(scan)
+    if path is None:
+        flash("captura no disponible", "warning")
+        return redirect(url_for("main.scan_detail", scan_id=scan.id))
+    return send_file(path, mimetype="image/png")
+
+
 @bp.post("/scans/<int:scan_id>/delete")
 @login_required
 def scan_delete(scan_id: int):
     scan = db.get_or_404(Scan, scan_id)
     path = stored_report_path(scan)
+    screenshot_path = stored_screenshot_path(scan)
     db.session.delete(scan)
     db.session.commit()
     if path is not None:
         try:
             path.unlink(missing_ok=True)
+        except OSError:
+            pass
+    if screenshot_path is not None:
+        try:
+            screenshot_path.unlink(missing_ok=True)
         except OSError:
             pass
     flash("Escaneo eliminado.", "success")
@@ -162,8 +200,27 @@ def scan_delete(scan_id: int):
 @bp.get("/reports")
 @login_required
 def reports():
-    scans = Scan.query.order_by(Scan.created_at.desc()).all()
-    return render_template("reports.html", scans=scans)
+    selected_owasp = request.args.get("owasp", "").strip()
+    all_scans = Scan.query.order_by(Scan.created_at.desc()).all()
+    scans = filter_scans_by_owasp(all_scans, selected_owasp)
+    screenshots = {scan.id: scan_screenshot_metadata(scan) for scan in scans}
+    return render_template(
+        "reports.html",
+        scans=scans,
+        screenshots=screenshots,
+        owasp_filters=available_owasp_filters(),
+        selected_owasp=selected_owasp,
+        scan_owasp_categories={
+            scan.id: scan_owasp_categories(scan)
+            for scan in scans
+        },
+    )
+
+
+@bp.get("/owasp")
+@login_required
+def owasp():
+    return render_template("owasp.html")
 
 
 def run_vigiscan_scan(scan: Scan) -> None:
@@ -171,6 +228,25 @@ def run_vigiscan_scan(scan: Scan) -> None:
     try:
         report_doc = execute_scan(scan.target_url)
         report_dir = Path(str(current_app.config["VIGISCAN_REPORT_DIR"]))
+        screenshot_result = capture_site_screenshot(
+            scan.target_url,
+            report_dir / "screenshots",
+            basename=f"scan-{scan.id}",
+        )
+        screenshot_data = screenshot_result.to_dict()
+        if screenshot_result.path:
+            screenshot_path = Path(screenshot_result.path)
+            try:
+                screenshot_data["relative_path"] = str(
+                    screenshot_path.relative_to(report_dir)
+                ).replace("\\", "/")
+            except ValueError:
+                screenshot_data["relative_path"] = screenshot_path.name
+        report_doc["screenshot"] = screenshot_data
+        report_doc["owasp_findings"] = classify_owasp_findings(
+            report_doc["target_url"],
+            report_doc["modules"],
+        )
         report_path = save_report(report_doc, "html", output_dir=report_dir)
     except Exception as exc:
         scan.status = "Fallido"
@@ -202,15 +278,23 @@ def execute_scan(target_url: str) -> ReportDocument:
     technologies_report = analyze_technologies(scan_result)
     cve_report = check_tech_report(technologies_report)
     directories_report = analyze_directories(scan_result, config=directory_config)
-    return build_report(
+    surface_report = analyze_surface_signals(scan_result)
+    modules = {
+        "headers": headers_report,
+        "tech_detect": technologies_report,
+        "cve_checker": cve_report,
+        "directories": directories_report,
+        "surface": surface_report,
+    }
+    report_doc = build_report(
         target_url=target_url,
-        modules={
-            "headers": headers_report,
-            "tech_detect": technologies_report,
-            "cve_checker": cve_report,
-            "directories": directories_report,
-        },
+        modules=modules,
     )
+    report_doc["owasp_findings"] = classify_owasp_findings(
+        report_doc["target_url"],
+        report_doc["modules"],
+    )
+    return report_doc
 
 
 def scan_findings(scan: Scan) -> dict[str, list[dict[str, Any]]]:
@@ -238,6 +322,7 @@ def scan_findings(scan: Scan) -> dict[str, list[dict[str, Any]]]:
             if finding.get("exposed") is True
         ],
         "cves": _dict_items(cve_report.get("matches")),
+        "owasp": scan_owasp_findings(scan),
     }
 
 
@@ -269,6 +354,51 @@ def detected_technology_counts(limit: int = 6) -> list[dict[str, int | str]]:
     ]
 
 
+def filter_scans_by_owasp(scans: list[Scan], category_id: str) -> list[Scan]:
+    """Filter scans by a stored or derived OWASP category id."""
+    if not category_id:
+        return scans
+    return [
+        scan
+        for scan in scans
+        if any(
+            finding.get("category_id") == category_id
+            for finding in scan_owasp_findings(scan)
+        )
+    ]
+
+
+def scan_owasp_findings(scan: Scan) -> list[dict[str, Any]]:
+    """Return stored OWASP findings or derive them for older scans."""
+    report_data = scan.report_data or {}
+    if not isinstance(report_data, dict):
+        return []
+    stored = report_data.get("owasp_findings")
+    if isinstance(stored, list):
+        return [item for item in stored if isinstance(item, dict)]
+    modules = report_data.get("modules")
+    if not isinstance(modules, dict):
+        return []
+    return classify_owasp_findings(
+        str(report_data.get("target_url") or scan.target_url),
+        modules,
+    )
+
+
+def scan_owasp_categories(scan: Scan) -> list[dict[str, str]]:
+    """Return unique OWASP categories present on a scan."""
+    categories: dict[str, str] = {}
+    for finding in scan_owasp_findings(scan):
+        category_id = finding.get("category_id")
+        category = finding.get("category")
+        if isinstance(category_id, str) and isinstance(category, str):
+            categories[category_id] = category
+    return [
+        {"id": category_id, "label": label}
+        for category_id, label in categories.items()
+    ]
+
+
 def stored_report_path(scan: Scan) -> Path | None:
     """Return a stored HTML report path if it exists under the report directory."""
     if not scan.report_path:
@@ -277,5 +407,29 @@ def stored_report_path(scan: Scan) -> Path | None:
     report_dir = Path(str(current_app.config["VIGISCAN_REPORT_DIR"])).resolve()
     path = Path(scan.report_path).resolve()
     if not path.is_relative_to(report_dir) or not path.exists():
+        return None
+    return path
+
+
+def scan_screenshot_metadata(scan: Scan) -> dict[str, Any]:
+    """Return stored screenshot metadata or an unavailable message."""
+    report_data = scan.report_data or {}
+    screenshot = report_data.get("screenshot") if isinstance(report_data, dict) else None
+    if isinstance(screenshot, dict):
+        return screenshot
+    return {"ok": False, "path": None, "message": "captura no disponible"}
+
+
+def stored_screenshot_path(scan: Scan) -> Path | None:
+    """Return a stored screenshot path if it exists under reports/screenshots."""
+    screenshot = scan_screenshot_metadata(scan)
+    if screenshot.get("ok") is not True or not screenshot.get("path"):
+        return None
+
+    screenshot_dir = (
+        Path(str(current_app.config["VIGISCAN_REPORT_DIR"])) / "screenshots"
+    ).resolve()
+    path = Path(str(screenshot["path"])).resolve()
+    if not path.is_relative_to(screenshot_dir) or not path.exists():
         return None
     return path

@@ -3,27 +3,33 @@
 {% block title %}Nuevo Escaneo - VigiScan{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-lg-7">
-    <div class="card">
-      <div class="card-body p-4">
-        <h1 class="h4 mb-3">Nuevo escaneo</h1>
-        <form method="post" novalidate>
-          {{ form.hidden_tag() }}
-          <div class="mb-3">
-            {{ form.target_url.label(class="form-label") }}
-            {{ form.target_url(class="form-control", placeholder="https://example.com") }}
-            {% for error in form.target_url.errors %}
-            <div class="invalid-feedback d-block">{{ error }}</div>
-            {% endfor %}
-          </div>
-          <div class="d-flex gap-2">
-            {{ form.submit(class="btn btn-primary") }}
-            <a class="btn btn-outline-secondary" href="{{ url_for('main.dashboard') }}">Cancelar</a>
-          </div>
-        </form>
-      </div>
-    </div>
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Target acquisition</span>
+    <h1>Nuevo escaneo</h1>
+    <p>Ingresa una URL http o https para ejecutar el motor actual de VigiScan.</p>
   </div>
-</div>
+  <a class="btn btn-cyber" href="{{ url_for('main.dashboard') }}">Cancelar</a>
+</section>
+
+<section class="scan-form-panel glass-panel animate-in delay-1">
+  <div class="panel-heading">
+    <span>Objetivo autorizado</span>
+    <small>HTTP/HTTPS</small>
+  </div>
+  <form class="scan-launch-form" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="mb-4">
+      {{ form.target_url.label(class="form-label") }}
+      {{ form.target_url(class="form-control cyber-input scan-url-input", placeholder="https://example.com") }}
+      {% for error in form.target_url.errors %}
+      <div class="invalid-feedback d-block">{{ error }}</div>
+      {% endfor %}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {{ form.submit(class="btn btn-glow") }}
+      <a class="btn btn-ghost" href="{{ url_for('main.dashboard') }}">Volver al dashboard</a>
+    </div>
+  </form>
+</section>
 {% endblock %}

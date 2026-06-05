@@ -1,33 +1,54 @@
 {% extends "base.html" %}
 
 {% block title %}Acceso - VigiScan{% endblock %}
+{% block body_class %}login-page{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6 col-lg-4">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h4 mb-3">Acceso al dashboard</h1>
-        <form method="post" novalidate>
-          {{ form.hidden_tag() }}
-          <div class="mb-3">
-            {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control", autocomplete="username") }}
-            {% for error in form.username.errors %}
-            <div class="invalid-feedback d-block">{{ error }}</div>
-            {% endfor %}
-          </div>
-          <div class="mb-3">
-            {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control", autocomplete="current-password") }}
-            {% for error in form.password.errors %}
-            <div class="invalid-feedback d-block">{{ error }}</div>
-            {% endfor %}
-          </div>
-          {{ form.submit(class="btn btn-primary w-100") }}
-        </form>
-      </div>
+<section class="login-stage">
+  <div class="login-visual" aria-hidden="true">
+    <div class="digital-globe">
+      <span class="globe-shine"></span>
+      <span class="globe-grid globe-grid-a"></span>
+      <span class="globe-grid globe-grid-b"></span>
+      <span class="network-ring network-ring-a"></span>
+      <span class="network-ring network-ring-b"></span>
+      <span class="network-node node-a"></span>
+      <span class="network-node node-b"></span>
+      <span class="network-node node-c"></span>
+      <span class="network-node node-d"></span>
     </div>
   </div>
-</div>
+
+  <div class="login-card glass-panel animate-in">
+    <div class="login-logo">
+      <div class="brand-mark brand-mark-lg">VS</div>
+      <div>
+        <h1>VigiScan</h1>
+        <p>Defensive Web Security Scanner</p>
+      </div>
+    </div>
+    <div class="access-strip">
+      <span class="pulse-dot"></span>
+      Acceso seguro al dashboard
+    </div>
+    <form method="post" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="mb-3">
+        {{ form.username.label(class="form-label") }}
+        {{ form.username(class="form-control cyber-input", autocomplete="username", placeholder="admin") }}
+        {% for error in form.username.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="mb-4">
+        {{ form.password.label(class="form-label") }}
+        {{ form.password(class="form-control cyber-input", autocomplete="current-password", placeholder="********") }}
+        {% for error in form.password.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {{ form.submit(class="btn btn-glow w-100") }}
+    </form>
+  </div>
+</section>
 {% endblock %}

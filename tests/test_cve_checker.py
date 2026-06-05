@@ -19,6 +19,11 @@ def test_load_cve_database_contains_required_examples():
     assert ("Apache", "2.4.49") in products
     assert ("WordPress", None) in products
     assert ("OpenSSL", "1.0.1") in products
+    assert all("cvss" in record for record in records)
+    assert all("cwe" in record for record in records)
+    assert all(record["impact"] for record in records)
+    assert all(record["recommendation"] for record in records)
+    assert all(record["references"] for record in records)
 
 
 def test_search_cves_finds_exact_product_version_match():
@@ -27,8 +32,15 @@ def test_search_cves_finds_exact_product_version_match():
     assert len(matches) == 1
     assert matches[0]["product"] == "Apache"
     assert matches[0]["matched_version"] == "2.4.49"
+    assert matches[0]["affected_version"] == "Apache HTTP Server 2.4.49"
     assert matches[0]["cve"] == "CVE-2021-41773"
+    assert matches[0]["cve_id"] == "CVE-2021-41773"
     assert matches[0]["match_type"] == "exact_version"
+    assert matches[0]["cvss"] == 7.5
+    assert matches[0]["cwe"] == "CWE-22"
+    assert matches[0]["impact"]
+    assert matches[0]["recommendation"]
+    assert matches[0]["references"]
 
 
 def test_search_cves_returns_generic_product_matches():
@@ -87,9 +99,16 @@ def test_check_tech_report_accepts_custom_database():
             {
                 "product": "ExampleCMS",
                 "version": "1.0.0",
+                "affected_version": "ExampleCMS 1.0.0",
                 "cve": "CVE-2099-0001",
+                "cve_id": "CVE-2099-0001",
                 "severity": "Low",
+                "cvss": 3.1,
+                "cwe": "CWE-200",
                 "description": "Synthetic local test record.",
+                "impact": "Synthetic impact.",
+                "recommendation": "Synthetic recommendation.",
+                "references": ["https://example.com/cve"],
             },
         ),
     )
@@ -114,3 +133,5 @@ def test_check_tech_report_accepts_custom_database():
     report = check_tech_report(tech_report, database=database)
 
     assert report["matches"][0]["cve"] == "CVE-2099-0001"
+    assert report["matches"][0]["cvss"] == 3.1
+    assert report["matches"][0]["references"] == ["https://example.com/cve"]

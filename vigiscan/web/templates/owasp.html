@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}OWASP Top 10 2025 - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Security education</span>
+    <h1>OWASP Top 10 2025</h1>
+    <p>Guia defensiva para clasificar hallazgos de VigiScan sin payloads ofensivos ni explotacion.</p>
+  </div>
+  <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">Analizar URL</a>
+</section>
+
+<section class="owasp-summary-grid">
+  <div class="owasp-summary-card animate-in">
+    <span class="eyebrow">Cobertura VigiScan</span>
+    <strong>Headers, tecnologias, CVE y rutas</strong>
+    <p>La clasificacion ayuda a convertir senales tecnicas en prioridades entendibles para equipos defensivos.</p>
+  </div>
+  <div class="owasp-summary-card animate-in delay-1">
+    <span class="eyebrow">Uso recomendado</span>
+    <strong>Triaging educativo</strong>
+    <p>Usa esta pagina como mapa de riesgo, no como prueba concluyente de vulnerabilidad.</p>
+  </div>
+  <div class="owasp-summary-card animate-in delay-2">
+    <span class="eyebrow">Enfoque</span>
+    <strong>Prevencion y remediacion</strong>
+    <p>Las recomendaciones se centran en hardening, validacion, monitoreo y mantenimiento seguro.</p>
+  </div>
+</section>
+
+<section class="owasp-grid">
+  <article class="owasp-card animate-in">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A01</span>
+        <h2>Broken Access Control</h2>
+      </div>
+      <span class="risk-badge risk-badge-high">Alto</span>
+    </div>
+    <p>Fallas que permiten a usuarios o procesos actuar fuera de los permisos previstos, acceder a datos no autorizados o modificar recursos que no les corresponden.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Paneles administrativos expuestos sin controles adecuados.</li>
+          <li>Archivos o rutas sensibles visibles desde internet.</li>
+          <li>Permisos inconsistentes entre frontend, API y backend.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Directorios expuestos como admin, backup o rutas de configuracion.</li>
+          <li>Headers ausentes que reducen aislamiento de navegador.</li>
+          <li>Tecnologias conocidas con CVE asociadas a control de acceso.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: rutas expuestas, headers, tecnologias y CVE.</div>
+    <div class="owasp-recommendation">Recomendacion: aplicar autorizacion del lado servidor, minimo privilegio, revisiones de rutas sensibles y pruebas de acceso por rol.</div>
+  </article>
+
+  <article class="owasp-card animate-in delay-1">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A02</span>
+        <h2>Security Misconfiguration</h2>
+      </div>
+      <span class="risk-badge risk-badge-high">Alto</span>
+    </div>
+    <p>Configuraciones inseguras, incompletas o por defecto que dejan servicios, frameworks o servidores web con una superficie innecesariamente amplia.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Headers de seguridad ausentes o debiles.</li>
+          <li>Listados de directorio, archivos temporales o backups visibles.</li>
+          <li>Mensajes de error demasiado detallados.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Content-Security-Policy, HSTS o X-Frame-Options faltantes.</li>
+          <li>Rutas comunes sensibles expuestas.</li>
+          <li>Versiones de servidor o framework reveladas.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: headers, tecnologias detectadas y rutas expuestas.</div>
+    <div class="owasp-recommendation">Recomendacion: usar baselines de hardening, desactivar defaults inseguros, limitar informacion expuesta y revisar configuracion por ambiente.</div>
+  </article>
+
+  <article class="owasp-card animate-in delay-2">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A03</span>
+        <h2>Software Supply Chain Failures</h2>
+      </div>
+      <span class="risk-badge risk-badge-high">Alto</span>
+    </div>
+    <p>Riesgos introducidos por dependencias, paquetes, imagenes, librerias o componentes externos que no estan inventariados, verificados o mantenidos.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Frameworks desactualizados publicados en produccion.</li>
+          <li>Componentes sin seguimiento de versiones.</li>
+          <li>Uso de librerias con vulnerabilidades conocidas.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Tecnologias identificadas por cabeceras, cookies o HTML.</li>
+          <li>Coincidencias con CVE locales asociadas a producto y version.</li>
+          <li>Archivos de paquetes o configuracion visibles accidentalmente.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: tecnologias, CVE y rutas expuestas.</div>
+    <div class="owasp-recommendation">Recomendacion: mantener SBOM, actualizar dependencias, verificar origen de artefactos y monitorear CVE relevantes.</div>
+  </article>
+
+  <article class="owasp-card animate-in">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A04</span>
+        <h2>Cryptographic Failures</h2>
+      </div>
+      <span class="risk-badge risk-badge-high">Alto</span>
+    </div>
+    <p>Proteccion insuficiente de datos sensibles por cifrado debil, transporte inseguro, secretos expuestos o politicas incompletas de seguridad del navegador.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Ausencia de HTTPS obligatorio o HSTS.</li>
+          <li>Secretos o archivos de entorno accesibles.</li>
+          <li>Cookies sin atributos de proteccion adecuados.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Strict-Transport-Security ausente.</li>
+          <li>Rutas como .env o configuraciones publicas.</li>
+          <li>Tecnologias con CVE criptograficas conocidas.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: headers, rutas expuestas, tecnologias y CVE.</div>
+    <div class="owasp-recommendation">Recomendacion: forzar HTTPS, proteger secretos, revisar cookies, rotar claves y usar algoritmos y librerias vigentes.</div>
+  </article>
+
+  <article class="owasp-card animate-in delay-1">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A05</span>
+        <h2>Injection</h2>
+      </div>
+      <span class="risk-badge risk-badge-high">Alto</span>
+    </div>
+    <p>Datos no confiables llegan a interpretes, consultas o comandos sin validacion y separacion adecuadas. Esta guia evita payloads y se limita a clasificacion defensiva.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Entradas no validadas en formularios o parametros.</li>
+          <li>Errores que revelan detalles internos de consultas o servicios.</li>
+          <li>Componentes con CVE relacionadas con validacion de entrada.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>CVE conocidas para tecnologia y version detectadas.</li>
+          <li>Headers faltantes que agravan inyeccion de contenido en navegador.</li>
+          <li>Mensajes de error o rutas que sugieren exposicion de detalles internos.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: tecnologias, CVE, headers y rutas expuestas.</div>
+    <div class="owasp-recommendation">Recomendacion: validar entradas, usar APIs parametrizadas, codificar salidas, revisar errores y priorizar parches de componentes afectados.</div>
+  </article>
+
+  <article class="owasp-card animate-in delay-2">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A06</span>
+        <h2>Insecure Design</h2>
+      </div>
+      <span class="risk-badge risk-badge-medium">Medio</span>
+    </div>
+    <p>Debilidades originadas en decisiones de arquitectura, flujos o controles ausentes desde el diseno, incluso si la implementacion no contiene un bug puntual.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Ausencia de limites claros para acciones sensibles.</li>
+          <li>Flujos sin separacion de roles o aprobaciones.</li>
+          <li>Controles de seguridad agregados tarde o de forma parcial.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Patrones repetidos de headers ausentes en varios objetivos.</li>
+          <li>Superficie publica amplia con rutas sensibles recurrentes.</li>
+          <li>Tecnologias heredadas que condicionan el modelo de seguridad.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: headers, tecnologias y rutas expuestas.</div>
+    <div class="owasp-recommendation">Recomendacion: modelar amenazas, definir controles por flujo, documentar decisiones y validar requisitos defensivos antes de produccion.</div>
+  </article>
+
+  <article class="owasp-card animate-in">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A07</span>
+        <h2>Authentication Failures</h2>
+      </div>
+      <span class="risk-badge risk-badge-high">Alto</span>
+    </div>
+    <p>Fallas en identificacion de usuarios, manejo de sesiones o proteccion de credenciales que facilitan acceso indebido o persistencia no autorizada.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Paneles de login o administracion expuestos sin controles adicionales.</li>
+          <li>Sesiones con configuracion debil de cookies.</li>
+          <li>Versiones de framework con problemas conocidos de autenticacion.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Rutas login, admin o paneles encontrados en superficie publica.</li>
+          <li>Headers defensivos ausentes en paginas sensibles.</li>
+          <li>CVE asociadas a tecnologias de autenticacion o sesion.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: rutas expuestas, headers, tecnologias y CVE.</div>
+    <div class="owasp-recommendation">Recomendacion: aplicar MFA donde corresponda, endurecer cookies, limitar accesos administrativos y monitorear eventos de autenticacion.</div>
+  </article>
+
+  <article class="owasp-card animate-in delay-1">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A08</span>
+        <h2>Software or Data Integrity Failures</h2>
+      </div>
+      <span class="risk-badge risk-badge-medium">Medio</span>
+    </div>
+    <p>Fallas para asegurar que codigo, datos, actualizaciones o artefactos no fueron alterados de forma no autorizada antes de ser usados por la aplicacion.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Actualizaciones sin verificacion de integridad.</li>
+          <li>Artefactos generados por CI/CD sin controles de confianza.</li>
+          <li>Backups o archivos de datos disponibles publicamente.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Backups, archivos comprimidos o datos expuestos.</li>
+          <li>Tecnologias con historial de CVE de integridad.</li>
+          <li>Headers que no reducen riesgo de manipulacion de contenido.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: rutas expuestas, tecnologias, CVE y headers.</div>
+    <div class="owasp-recommendation">Recomendacion: firmar artefactos, verificar integridad, proteger backups y separar permisos de despliegue.</div>
+  </article>
+
+  <article class="owasp-card animate-in delay-2">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A09</span>
+        <h2>Logging & Alerting Failures</h2>
+      </div>
+      <span class="risk-badge risk-badge-medium">Medio</span>
+    </div>
+    <p>Eventos de seguridad no se registran, no se alertan o no se conservan con suficiente contexto para detectar, investigar y responder a incidentes.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>No registrar accesos fallidos o cambios administrativos.</li>
+          <li>Alertas inexistentes para errores repetidos o cambios criticos.</li>
+          <li>Logs con datos sensibles visibles para usuarios no autorizados.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>VigiScan no confirma logging interno, pero ayuda a priorizar donde revisar.</li>
+          <li>Rutas sensibles expuestas que deberian tener monitoreo reforzado.</li>
+          <li>CVE y tecnologias criticas que requieren alertas operativas.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: rutas expuestas, tecnologias y CVE.</div>
+    <div class="owasp-recommendation">Recomendacion: centralizar logs, definir alertas de seguridad, proteger datos registrados y revisar cobertura de eventos criticos.</div>
+  </article>
+
+  <article class="owasp-card animate-in">
+    <div class="owasp-card-head">
+      <div>
+        <span class="owasp-code">A10</span>
+        <h2>Mishandling of Exceptional Conditions</h2>
+      </div>
+      <span class="risk-badge risk-badge-medium">Medio</span>
+    </div>
+    <p>Manejo insuficiente de estados inesperados, errores, fallos de dependencias o condiciones anormales que pueden revelar informacion o dejar el sistema en estado inseguro.</p>
+    <div class="owasp-columns">
+      <div>
+        <h3>Ejemplos</h3>
+        <ul>
+          <li>Errores tecnicos visibles al usuario final.</li>
+          <li>Fallas que no cierran de forma segura.</li>
+          <li>Respuestas inconsistentes ante recursos inexistentes o incompletos.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Senales VigiScan</h3>
+        <ul>
+          <li>Errores devueltos durante el escaneo de rutas comunes.</li>
+          <li>Versiones reveladas por respuestas o paginas de error.</li>
+          <li>Headers ausentes que aumentan el impacto de respuestas inesperadas.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="owasp-relation">Relacion: rutas expuestas, tecnologias y headers.</div>
+    <div class="owasp-recommendation">Recomendacion: usar manejo centralizado de errores, fallar de forma segura, registrar excepciones y mostrar mensajes genericos al usuario.</div>
+  </article>
+</section>
+{% endblock %}

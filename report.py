@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 DEFAULT_REPORTS_DIR = Path("reports")
 
@@ -43,6 +43,8 @@ class ReportDocument(TypedDict):
     executive_summary: ExecutiveSummary
     risk: RiskSummary
     modules: dict[str, Any]
+    screenshot: NotRequired[dict[str, Any]]
+    owasp_findings: NotRequired[list[dict[str, Any]]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -212,6 +214,8 @@ def render_txt(report: ReportDocument) -> str:
         "Factors:",
     ]
     lines.extend(f"- {factor}" for factor in report["risk"]["factors"])
+    lines.extend(["", "OWASP Top 10 2025", "-" * 18])
+    lines.extend(_render_txt_owasp(report.get("owasp_findings")))
     lines.extend(["", "Module Results", "-" * 14])
 
     for module_name, module_report in report["modules"].items():
@@ -236,6 +240,8 @@ def render_html(report: ReportDocument) -> str:
         f"<li>{escape(item)}</li>"
         for item in report["executive_summary"]["highlights"]
     )
+    screenshot_html = _render_html_screenshot(report.get("screenshot"))
+    owasp_html = _render_html_owasp(report.get("owasp_findings"))
 
     return f"""<!doctype html>
 <html lang="es">
@@ -339,9 +345,59 @@ def render_html(report: ReportDocument) -> str:
       border-radius: 4px;
       padding: 2px 5px;
     }}
+    .cve-list {{
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+    }}
+    .cve-card {{
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfe;
+    }}
+    .cve-card h3 {{
+      margin: 0;
+    }}
+    .cve-heading {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }}
+    .cve-heading .badge {{
+      background: var(--medium);
+    }}
+    .detail-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }}
+    .detail-item {{
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: #ffffff;
+      overflow-wrap: anywhere;
+    }}
+    .detail-label {{
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }}
+    .references a {{
+      color: var(--accent);
+      overflow-wrap: anywhere;
+    }}
     ul {{ padding-left: 20px; }}
     @media (max-width: 780px) {{
       .grid {{ grid-template-columns: 1fr; }}
+      .detail-grid {{ grid-template-columns: 1fr; }}
       .shell {{ padding: 22px 14px 36px; }}
     }}
   </style>
@@ -373,6 +429,8 @@ def render_html(report: ReportDocument) -> str:
       </section>
     </div>
 
+    {screenshot_html}
+    {owasp_html}
     {modules_html}
   </main>
 </body>
@@ -431,8 +489,9 @@ def _score_cves(report: dict[str, Any]) -> tuple[int, list[str]]:
         severity = str(match.get("severity", "low"))
         points = weights.get(severity.lower(), 5)
         score += points
+        cve_id = match.get("cve_id") or match.get("cve", "CVE desconocido")
         factors.append(
-            f"{match.get('cve', 'CVE desconocido')} afecta "
+            f"{cve_id} afecta "
             f"{match.get('product', 'producto desconocido')} ({severity})."
         )
     return min(score, 60), factors
@@ -489,6 +548,18 @@ def _render_txt_module(module_name: str, module_report: Any) -> list[str]:
     return lines
 
 
+def _render_txt_owasp(findings: Any) -> list[str]:
+    rows = _as_dicts(findings)
+    if not rows:
+        return ["- Sin clasificaciones OWASP."]
+    return [
+        "- "
+        f"{item.get('finding')} | {item.get('severity')} | "
+        f"{item.get('category')} | {item.get('recommendation')}"
+        for item in rows
+    ]
+
+
 def _render_txt_headers(report: dict[str, Any]) -> list[str]:
     return [
         f"- {item.get('header')}: {item.get('status')} / {item.get('severity')}"
@@ -512,11 +583,28 @@ def _render_txt_technologies(report: dict[str, Any]) -> list[str]:
 
 
 def _render_txt_cves(report: dict[str, Any]) -> list[str]:
-    return [
-        f"- {item.get('cve')}: {item.get('product')} "
-        f"{item.get('matched_version') or ''} ({item.get('severity')})"
-        for item in _as_dicts(report.get("matches"))
-    ]
+    lines: list[str] = []
+    for item in _as_dicts(report.get("matches")):
+        lines.extend(
+            [
+                f"- CVE ID: {item.get('cve_id') or item.get('cve')}",
+                f"  Product: {item.get('product')}",
+                f"  Affected version: "
+                f"{item.get('affected_version') or item.get('matched_version') or '-'}",
+                f"  Severity: {item.get('severity')}",
+                f"  CVSS: {item.get('cvss') if item.get('cvss') is not None else '-'}",
+                f"  CWE: {item.get('cwe') or '-'}",
+                f"  Description: {item.get('description')}",
+                f"  Impact: {item.get('impact') or '-'}",
+                f"  Recommendation: {item.get('recommendation') or '-'}",
+                "  References: "
+                + (
+                    ", ".join(str(ref) for ref in _as_list(item.get("references")))
+                    or "-"
+                ),
+            ]
+        )
+    return lines or ["- Sin CVE encontradas."]
 
 
 def _render_html_module(module_name: str, module_report: Any) -> str:
@@ -565,23 +653,103 @@ def _render_html_module(module_name: str, module_report: Any) -> str:
             ),
         )
     elif module_name == "cve_checker":
-        rows = _html_rows(
-            ("CVE", "Producto", "Version", "Severidad"),
-            (
-                (
-                    item.get("cve"),
-                    item.get("product"),
-                    item.get("matched_version") or "-",
-                    item.get("severity"),
-                )
-                for item in _as_dicts(module_report.get("matches"))
-            ),
-        )
+        return _render_html_cve_module(title, module_report)
     else:
         body = escape(json.dumps(module_report, ensure_ascii=False, indent=2))
         return f"<section><h2>{title}</h2><pre>{body}</pre></section>"
 
     return f"<section><h2>{title}</h2>{rows}</section>"
+
+
+def _render_html_screenshot(screenshot: Any) -> str:
+    if not isinstance(screenshot, dict):
+        return (
+            "<section><h2>Captura visual</h2>"
+            "<p>captura no disponible</p></section>"
+        )
+    if screenshot.get("ok") is True:
+        image_src = screenshot.get("relative_path") or screenshot.get("path")
+        if image_src:
+            return (
+                "<section><h2>Captura visual</h2>"
+                f"<img src=\"{escape(str(image_src), quote=True)}\" "
+                "alt=\"Captura visual del sitio escaneado\" "
+                "style=\"width:100%;border:1px solid var(--line);"
+                "border-radius:8px;display:block;\">"
+                "</section>"
+            )
+    message = str(screenshot.get("message") or "captura no disponible")
+    return f"<section><h2>Captura visual</h2><p>{escape(message)}</p></section>"
+
+
+def _render_html_owasp(findings: Any) -> str:
+    rows = _html_rows(
+        ("Hallazgo", "Severidad", "Categoria OWASP", "Recomendacion"),
+        (
+            (
+                item.get("finding"),
+                item.get("severity"),
+                item.get("category"),
+                item.get("recommendation"),
+            )
+            for item in _as_dicts(findings)
+        ),
+    )
+    return f"<section><h2>Clasificacion OWASP Top 10 2025</h2>{rows}</section>"
+
+
+def _render_html_cve_module(title: str, module_report: dict[str, Any]) -> str:
+    cards = []
+    for item in _as_dicts(module_report.get("matches")):
+        cve_id = item.get("cve_id") or item.get("cve") or "CVE desconocido"
+        affected_version = item.get("affected_version") or item.get("matched_version")
+        references = _as_list(item.get("references"))
+        references_html = "".join(
+            f"<li><a href=\"{escape(str(ref), quote=True)}\">"
+            f"{escape(str(ref))}</a></li>"
+            for ref in references
+        ) or "<li>Sin referencias locales.</li>"
+        cards.append(
+            f"""
+      <article class="cve-card">
+        <div class="cve-heading">
+          <h3>{escape(str(cve_id))}</h3>
+          <span class="badge">{escape(str(item.get('severity') or '-'))}</span>
+        </div>
+        <div class="detail-grid">
+          {_detail_item("CVE ID", cve_id)}
+          {_detail_item("Producto", item.get("product"))}
+          {_detail_item("Version afectada", affected_version)}
+          {_detail_item("Severidad", item.get("severity"))}
+          {_detail_item("CVSS", item.get("cvss"))}
+          {_detail_item("CWE", item.get("cwe"))}
+        </div>
+        <p><strong>Descripcion:</strong> {escape(str(item.get('description') or '-'))}</p>
+        <p><strong>Impacto:</strong> {escape(str(item.get('impact') or '-'))}</p>
+        <p><strong>Recomendacion:</strong> {escape(str(item.get('recommendation') or '-'))}</p>
+        <div class="references">
+          <strong>Referencias:</strong>
+          <ul>{references_html}</ul>
+        </div>
+      </article>
+"""
+        )
+    if not cards:
+        cards.append("<p>Sin CVE encontradas.</p>")
+    return (
+        f"<section><h2>{title}</h2>"
+        f"<div class=\"cve-list\">{''.join(cards)}</div></section>"
+    )
+
+
+def _detail_item(label: str, value: Any) -> str:
+    display = "-" if value is None or value == "" else str(value)
+    return (
+        "<div class=\"detail-item\">"
+        f"<span class=\"detail-label\">{escape(label)}</span>"
+        f"{escape(display)}"
+        "</div>"
+    )
 
 
 def _html_rows(headers: tuple[str, ...], rows: Any) -> str:

@@ -22,9 +22,16 @@ class CVERecord(TypedDict):
 
     product: str
     version: str | None
+    affected_version: NotRequired[str | None]
     cve: str
+    cve_id: NotRequired[str]
     severity: str
+    cvss: NotRequired[float | None]
+    cwe: NotRequired[str | None]
     description: str
+    impact: NotRequired[str]
+    recommendation: NotRequired[str]
+    references: NotRequired[list[str]]
 
 
 class CVEMatch(TypedDict):
@@ -33,9 +40,16 @@ class CVEMatch(TypedDict):
     product: str
     detected_version: str | None
     matched_version: str | None
+    affected_version: str | None
     cve: str
+    cve_id: str
     severity: str
+    cvss: float | None
+    cwe: str | None
     description: str
+    impact: str
+    recommendation: str
+    references: list[str]
     match_type: str
 
 
@@ -144,9 +158,22 @@ def _normalize_record(record: object) -> CVERecord:
     return {
         "product": str(record["product"]),
         "version": version,
+        "affected_version": _optional_string(record.get("affected_version")),
         "cve": str(record["cve"]),
+        "cve_id": str(record.get("cve_id", record["cve"])),
         "severity": str(record["severity"]),
+        "cvss": _optional_float(record.get("cvss")),
+        "cwe": _optional_string(record.get("cwe")),
         "description": str(record["description"]),
+        "impact": str(record.get("impact", "Impacto no documentado en la base local.")),
+        "recommendation": str(
+            record.get(
+                "recommendation",
+                "Revisar el componente afectado, aplicar parches disponibles "
+                "y validar controles compensatorios.",
+            )
+        ),
+        "references": _string_list(record.get("references")),
     }
 
 
@@ -160,9 +187,20 @@ def _build_match(
         "product": record["product"],
         "detected_version": detected_version,
         "matched_version": record["version"],
+        "affected_version": record.get("affected_version") or record["version"],
         "cve": record["cve"],
+        "cve_id": record.get("cve_id", record["cve"]),
         "severity": record["severity"],
+        "cvss": record.get("cvss"),
+        "cwe": record.get("cwe"),
         "description": record["description"],
+        "impact": record.get("impact", "Impacto no documentado en la base local."),
+        "recommendation": record.get(
+            "recommendation",
+            "Revisar el componente afectado, aplicar parches disponibles "
+            "y validar controles compensatorios.",
+        ),
+        "references": record.get("references", []),
         "match_type": match_type,
     }
 
@@ -204,3 +242,30 @@ def _normalize_version(version: str | None) -> str | None:
     if version is None:
         return None
     return version.strip().lower()
+
+
+def _optional_string(value: object) -> str | None:
+    """Return a stripped string or ``None`` for empty local metadata."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _optional_float(value: object) -> float | None:
+    """Return a float CVSS value when available."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("CVE database cvss must be numeric or null.") from exc
+
+
+def _string_list(value: object) -> list[str]:
+    """Normalize a references value into a list of strings."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("CVE database references must be a list of strings.")
+    return [str(item) for item in value]

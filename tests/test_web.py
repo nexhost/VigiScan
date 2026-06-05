@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+from vigiscan.modules.screenshot import ScreenshotResult
 from vigiscan.web.app import create_app
 from vigiscan.web.models import Scan, User, db
 
@@ -39,6 +42,7 @@ def login(client):
 
 def create_completed_scan(client, monkeypatch):
     monkeypatch.setattr("vigiscan.web.routes.execute_scan", fake_report)
+    monkeypatch.setattr("vigiscan.web.routes.capture_site_screenshot", fake_capture)
     login(client)
     response = client.post(
         "/scans/new",
@@ -47,6 +51,33 @@ def create_completed_scan(client, monkeypatch):
     )
     assert response.status_code == 200
     return response
+
+
+def fake_capture(target_url: str, output_dir: Path | str, *, basename: str | None = None):
+    screenshot_dir = Path(output_dir)
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+    path = screenshot_dir / f"{basename or 'scan'}.png"
+    path.write_bytes(b"\x89PNG\r\n\x1a\n")
+    return ScreenshotResult(
+        ok=True,
+        path=str(path),
+        message="captura disponible",
+        engine="playwright",
+    )
+
+
+def fake_unavailable_capture(
+    target_url: str,
+    output_dir: Path | str,
+    *,
+    basename: str | None = None,
+):
+    return ScreenshotResult(
+        ok=False,
+        path=None,
+        message="captura no disponible",
+        engine=None,
+    )
 
 
 def fake_report(target_url: str):
@@ -100,9 +131,19 @@ def fake_report(target_url: str):
                 "matches": [
                     {
                         "cve": "CVE-2021-41773",
+                        "cve_id": "CVE-2021-41773",
                         "product": "Apache",
+                        "affected_version": "Apache HTTP Server 2.4.49",
                         "matched_version": "2.4.49",
                         "severity": "Critical",
+                        "cvss": 7.5,
+                        "cwe": "CWE-22",
+                        "description": "Path traversal and file disclosure.",
+                        "impact": "Sensitive file disclosure risk.",
+                        "recommendation": "Update Apache and review access controls.",
+                        "references": [
+                            "https://nvd.nist.gov/vuln/detail/CVE-2021-41773"
+                        ],
                     }
                 ],
             },
@@ -142,6 +183,14 @@ def test_logged_in_user_can_create_scan(client, app, monkeypatch):
     assert b"Apache" in response.data
     assert b".env" in response.data
     assert b"CVE-2021-41773" in response.data
+    assert b"CVSS" in response.data
+    assert b"CWE-22" in response.data
+    assert b"Sensitive file disclosure risk." in response.data
+    assert b"Update Apache and review access controls." in response.data
+    assert b"Captura visual" in response.data
+    assert b"Clasificacion OWASP Top 10 2025" in response.data
+    assert b"A02: Security Misconfiguration" in response.data
+    assert b"A03: Software Supply Chain Failures" in response.data
     with app.app_context():
         scan = Scan.query.one()
         assert scan.target_url == "https://example.com"
@@ -150,6 +199,8 @@ def test_logged_in_user_can_create_scan(client, app, monkeypatch):
         assert scan.risk_level == "Alto"
         assert scan.report_path is not None
         assert scan.report_data is not None
+        assert scan.report_data["screenshot"]["ok"] is True
+        assert scan.report_data["owasp_findings"]
 
 
 def test_dashboard_shows_soc_summary_charts_and_actions(client, monkeypatch):
@@ -166,6 +217,59 @@ def test_dashboard_shows_soc_summary_charts_and_actions(client, monkeypatch):
     assert b"HTML" in response.data
     assert b"JSON" in response.data
     assert b"Eliminar" in response.data
+    assert b"Filtrar por OWASP" in response.data
+    assert b"A02" in response.data
+
+
+def test_reports_show_detailed_cve_metadata(client, monkeypatch):
+    create_completed_scan(client, monkeypatch)
+    response = client.get("/reports")
+
+    assert response.status_code == 200
+    assert b"CVE locales" in response.data
+    assert b"Captura" in response.data
+    assert b"OWASP" in response.data
+    assert b"CVE-2021-41773" in response.data
+    assert b"Apache HTTP Server 2.4.49" in response.data
+    assert b"CVSS" in response.data
+    assert b"CWE-22" in response.data
+    assert b"Sensitive file disclosure risk." in response.data
+
+
+def test_dashboard_and_reports_filter_by_owasp_category(client, monkeypatch):
+    create_completed_scan(client, monkeypatch)
+
+    dashboard_response = client.get("/?owasp=A03")
+    assert dashboard_response.status_code == 200
+    assert b"https://example.com" in dashboard_response.data
+    assert b"A03" in dashboard_response.data
+
+    empty_dashboard = client.get("/?owasp=A04")
+    assert empty_dashboard.status_code == 200
+    assert b"Sin escaneos registrados." in empty_dashboard.data
+
+    reports_response = client.get("/reports?owasp=A02")
+    assert reports_response.status_code == 200
+    assert b"https://example.com" in reports_response.data
+    assert b"A02" in reports_response.data
+
+
+def test_scan_shows_unavailable_screenshot_message(client, monkeypatch):
+    monkeypatch.setattr("vigiscan.web.routes.execute_scan", fake_report)
+    monkeypatch.setattr(
+        "vigiscan.web.routes.capture_site_screenshot",
+        fake_unavailable_capture,
+    )
+    login(client)
+
+    response = client.post(
+        "/scans/new",
+        data={"target_url": "https://example.com"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"captura no disponible" in response.data
 
 
 def test_scan_downloads_and_delete_work(client, app, monkeypatch):
@@ -175,6 +279,13 @@ def test_scan_downloads_and_delete_work(client, app, monkeypatch):
     assert html_response.status_code == 200
     assert "attachment" in html_response.headers["Content-Disposition"]
     assert b"VigiScan Security Report" in html_response.data
+    assert b"Captura visual" in html_response.data
+    assert b"Clasificacion OWASP Top 10 2025" in html_response.data
+    assert b"A03: Software Supply Chain Failures" in html_response.data
+
+    screenshot_response = client.get("/scans/1/screenshot")
+    assert screenshot_response.status_code == 200
+    assert screenshot_response.mimetype == "image/png"
 
     json_response = client.get("/scans/1/download/json")
     assert json_response.status_code == 200
@@ -197,3 +308,20 @@ def test_scan_form_rejects_non_http_urls(client):
 
     assert response.status_code == 200
     assert b"http://" in response.data
+
+
+def test_owasp_module_requires_login_and_shows_categories(client):
+    response = client.get("/owasp")
+
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+    login(client)
+    response = client.get("/owasp")
+
+    assert response.status_code == 200
+    assert b"OWASP Top 10 2025" in response.data
+    assert b"A01" in response.data
+    assert b"Broken Access Control" in response.data
+    assert b"Mishandling of Exceptional Conditions" in response.data
+    assert b"Headers, tecnologias, CVE y rutas" in response.data

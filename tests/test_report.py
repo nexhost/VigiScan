@@ -61,9 +61,16 @@ def sample_modules():
                     "product": "Apache",
                     "detected_version": "2.4.49",
                     "matched_version": "2.4.49",
+                    "affected_version": "Apache HTTP Server 2.4.49",
                     "cve": "CVE-2021-41773",
+                    "cve_id": "CVE-2021-41773",
                     "severity": "Critical",
+                    "cvss": 7.5,
+                    "cwe": "CWE-22",
                     "description": "Path traversal.",
+                    "impact": "File disclosure risk.",
+                    "recommendation": "Update Apache and review access controls.",
+                    "references": ["https://nvd.nist.gov/vuln/detail/CVE-2021-41773"],
                     "match_type": "exact_version",
                 },
             ],
@@ -77,6 +84,16 @@ def test_build_report_adds_executive_summary_and_risk_score():
         modules=sample_modules(),
         generated_at=datetime(2026, 6, 4, tzinfo=UTC),
     )
+    report["owasp_findings"] = [
+        {
+            "finding": "Tecnologia vulnerable por CVE: CVE-2021-41773 en Apache.",
+            "severity": "Critical",
+            "category_id": "A03",
+            "category": "A03: Software Supply Chain Failures",
+            "recommendation": "Update Apache and review access controls.",
+            "source": "cve_checker",
+        }
+    ]
 
     assert report["target_url"] == "https://example.com"
     assert report["risk"]["score"] == 73
@@ -91,6 +108,16 @@ def test_save_reports_writes_txt_json_and_html(tmp_path):
         modules=sample_modules(),
         generated_at=datetime(2026, 6, 4, tzinfo=UTC),
     )
+    report["owasp_findings"] = [
+        {
+            "finding": "Tecnologia vulnerable por CVE: CVE-2021-41773 en Apache.",
+            "severity": "Critical",
+            "category_id": "A03",
+            "category": "A03: Software Supply Chain Failures",
+            "recommendation": "Update Apache and review access controls.",
+            "source": "cve_checker",
+        }
+    ]
 
     paths = save_reports(report, output_dir=tmp_path, basename="sample")
 
@@ -101,6 +128,13 @@ def test_save_reports_writes_txt_json_and_html(tmp_path):
     assert "<html lang=\"es\">" in html
     assert "Resumen Ejecutivo" in html
     assert "Puntuacion de Riesgo" in html
+    assert "CVE-2021-41773" in html
+    assert "CVSS" in html
+    assert "CWE-22" in html
+    assert "File disclosure risk." in html
+    assert "Update Apache and review access controls." in html
+    assert "Clasificacion OWASP Top 10 2025" in html
+    assert "A03: Software Supply Chain Failures" in html
 
 
 def test_render_html_escapes_untrusted_values():
