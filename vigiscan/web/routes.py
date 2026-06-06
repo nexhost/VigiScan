@@ -16,6 +16,7 @@ from flask import (
     Response,
     current_app,
     flash,
+    jsonify,
     request,
     redirect,
     render_template,
@@ -37,6 +38,7 @@ from modules.tech_detect import analyze_technologies
 from report import ReportDocument, build_report, save_report
 from scanner import ScanRequest, ScannerConfig, create_scanner
 from vigiscan.modules.api_security import analyze_api_security
+from vigiscan.modules.infra_monitor import collect_metrics, human_uptime
 from vigiscan.modules.passive_scan import analyze_passive
 from vigiscan.modules.screenshot import capture_site_screenshot
 from vigiscan.modules.secret_scanner import scan_text as scan_secrets_in_text
@@ -64,6 +66,7 @@ from vigiscan.web.forms import (
 )
 from vigiscan.web.models import (
     Asset,
+    InfrastructureMetric,
     Indicator,
     MonitoredSite,
     Scan,
@@ -99,6 +102,7 @@ def dashboard():
         monitored_sites,
         vt_enabled=bool(current_user.virustotal_enabled),
     )
+    infra_metric = capture_infrastructure_metric()
     vt_latest = VirusTotalResult.query.order_by(
         VirusTotalResult.queried_at.desc()
     ).first()
@@ -110,6 +114,7 @@ def dashboard():
         dashboard_stats=dashboard_stats,
         platform_stats=build_platform_stats(monitored_sites),
         overview_stats=overview_stats,
+        infrastructure=metric_to_dict(infra_metric),
         regional_settings=get_system_settings(),
         recent_iocs=Indicator.query.order_by(Indicator.created_at.desc()).limit(5).all(),
         vt_summary={
@@ -446,11 +451,8 @@ def owasp():
 def uptime():
     form = MonitoredSiteForm()
     if form.validate_on_submit():
-        site = MonitoredSite(
-            name=form.name.data.strip(),
-            url=form.url.data.strip(),
-            active=bool(form.active.data),
-        )
+        site = MonitoredSite()
+        populate_monitored_site_from_form(site, form)
         db.session.add(site)
         db.session.commit()
         run_uptime_check(site)
@@ -460,11 +462,13 @@ def uptime():
 
     sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
     stats = uptime_dashboard_stats(sites)
+    infra_metric = capture_infrastructure_metric()
     return render_template(
         "uptime.html",
         form=form,
         sites=sites,
         stats=stats,
+        infra=metric_to_dict(infra_metric),
         charts=uptime_chart_data(sites),
         rows=uptime_table_rows(sites),
     )
@@ -478,6 +482,151 @@ def uptime_check(site_id: int):
     db.session.commit()
     flash("Chequeo uptime ejecutado.", "success")
     return redirect(url_for("main.uptime"))
+
+
+@bp.route("/uptime/<int:site_id>/edit", methods=("GET", "POST"))
+@login_required
+def uptime_edit(site_id: int):
+    site = db.get_or_404(MonitoredSite, site_id)
+    form = MonitoredSiteForm(obj=site)
+    if form.validate_on_submit():
+        populate_monitored_site_from_form(site, form)
+        db.session.commit()
+        flash("Monitor uptime actualizado.", "success")
+        return redirect(url_for("main.uptime"))
+    return render_template("uptime_form.html", form=form, site=site)
+
+
+@bp.post("/uptime/<int:site_id>/pause")
+@login_required
+def uptime_pause(site_id: int):
+    site = db.get_or_404(MonitoredSite, site_id)
+    site.active = False
+    db.session.commit()
+    flash("Monitor pausado.", "success")
+    return redirect(url_for("main.uptime"))
+
+
+@bp.post("/uptime/<int:site_id>/resume")
+@login_required
+def uptime_resume(site_id: int):
+    site = db.get_or_404(MonitoredSite, site_id)
+    site.active = True
+    db.session.commit()
+    flash("Monitor reanudado.", "success")
+    return redirect(url_for("main.uptime"))
+
+
+@bp.post("/uptime/<int:site_id>/delete")
+@login_required
+def uptime_delete(site_id: int):
+    site = db.get_or_404(MonitoredSite, site_id)
+    db.session.delete(site)
+    db.session.commit()
+    flash("Monitor eliminado.", "success")
+    return redirect(url_for("main.uptime"))
+
+
+@bp.get("/infrastructure")
+@login_required
+def infrastructure():
+    metric = capture_infrastructure_metric()
+    history = InfrastructureMetric.query.order_by(
+        InfrastructureMetric.created_at.desc()
+    ).limit(50).all()
+    history.reverse()
+    return render_template(
+        "infrastructure.html",
+        metric=metric_to_dict(metric),
+        history=metrics_history_to_chart(history),
+    )
+
+
+@bp.get("/api/dashboard/summary")
+@login_required
+def api_dashboard_summary():
+    scans = Scan.query.order_by(Scan.created_at.desc()).all()
+    sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
+    vt_latest = VirusTotalResult.query.order_by(
+        VirusTotalResult.queried_at.desc()
+    ).first()
+    return jsonify(
+        {
+            "dashboard": build_dashboard_stats(scans),
+            "platform": build_platform_stats(sites),
+            "overview": build_security_overview_stats(
+                scans,
+                sites,
+                vt_enabled=bool(current_user.virustotal_enabled),
+            ),
+            "uptime": uptime_dashboard_stats(sites),
+            "virustotal": {
+                "enabled": bool(current_user.virustotal_enabled),
+                "cached_results": VirusTotalResult.query.count(),
+                "latest_target": vt_latest.observable_value if vt_latest else None,
+                "latest_reputation": vt_latest.reputation if vt_latest else 0,
+            },
+            "infrastructure": metric_to_dict(capture_infrastructure_metric()),
+        }
+    )
+
+
+@bp.get("/api/dashboard/charts")
+@login_required
+def api_dashboard_charts():
+    scans = Scan.query.order_by(Scan.created_at.desc()).all()
+    stats = build_dashboard_stats(scans)
+    risk_counts = {
+        "Alto": Scan.query.filter_by(risk_level="Alto").count(),
+        "Medio": Scan.query.filter_by(risk_level="Medio").count(),
+        "Bajo": Scan.query.filter_by(risk_level="Bajo").count(),
+    }
+    top_technologies = detected_technology_counts(limit=10)
+    return jsonify(
+        {
+            "severity": {"labels": list(risk_counts.keys()), "values": list(risk_counts.values())},
+            "technology": {
+                "labels": [item["name"] for item in top_technologies],
+                "values": [item["count"] for item in top_technologies],
+            },
+            "scans_by_day": stats["scans_by_day"],
+            "findings_by_severity": stats["findings_by_severity"],
+            "weekly_risk": stats["weekly_risk"],
+            "owasp_top": stats["owasp_top"],
+            "cve_by_severity": stats["cve_by_severity"],
+            "high_risk_trend": stats["high_risk_trend"],
+        }
+    )
+
+
+@bp.get("/api/uptime/summary")
+@login_required
+def api_uptime_summary():
+    sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
+    return jsonify(uptime_dashboard_stats(sites))
+
+
+@bp.get("/api/uptime/history")
+@login_required
+def api_uptime_history():
+    sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
+    return jsonify(uptime_chart_data(sites))
+
+
+@bp.get("/api/infrastructure/metrics")
+@login_required
+def api_infrastructure_metrics():
+    return jsonify(metric_to_dict(capture_infrastructure_metric()))
+
+
+@bp.get("/api/infrastructure/history")
+@login_required
+def api_infrastructure_history():
+    history = InfrastructureMetric.query.order_by(
+        InfrastructureMetric.created_at.desc()
+    ).limit(100).all()
+    history.reverse()
+    return jsonify(metrics_history_to_chart(history))
 
 
 @bp.route("/assets", methods=("GET", "POST"))
@@ -750,6 +899,80 @@ def masked_api_key(api_key: str | None) -> str:
         return "No configurada"
     tail = api_key[-4:] if len(api_key) >= 4 else api_key
     return f"********{tail}"
+
+
+def populate_monitored_site_from_form(site: MonitoredSite, form: MonitoredSiteForm) -> None:
+    """Persist uptime monitor metadata from a submitted form."""
+    site.name = form.name.data.strip()
+    site.url = form.url.data.strip()
+    site.environment = form.environment.data
+    site.responsible = (form.responsible.data or "").strip() or None
+    site.country = (form.country.data or "").strip() or None
+    site.criticality = form.criticality.data
+    site.monitor_interval_minutes = int(form.monitor_interval_minutes.data or 5)
+    site.notes = (form.notes.data or "").strip() or None
+    site.active = bool(form.active.data)
+
+
+def capture_infrastructure_metric() -> InfrastructureMetric:
+    """Collect and store one infrastructure metric snapshot."""
+    data = collect_metrics()
+    metric = InfrastructureMetric(**data)
+    db.session.add(metric)
+    db.session.commit()
+    return metric
+
+
+def metric_to_dict(metric: InfrastructureMetric | None) -> dict[str, Any]:
+    """Serialize an infrastructure metric for templates and APIs."""
+    if metric is None:
+        return {
+            "cpu_percent": 0,
+            "memory_percent": 0,
+            "memory_used": 0,
+            "memory_total": 0,
+            "disk_percent": 0,
+            "disk_used": 0,
+            "disk_total": 0,
+            "net_upload_rate": 0,
+            "net_download_rate": 0,
+            "active_processes": 0,
+            "server_uptime": 0,
+            "server_uptime_label": "0m",
+            "created_at": None,
+        }
+    return {
+        "id": metric.id,
+        "cpu_percent": metric.cpu_percent,
+        "memory_percent": metric.memory_percent,
+        "memory_used": metric.memory_used,
+        "memory_total": metric.memory_total,
+        "disk_percent": metric.disk_percent,
+        "disk_used": metric.disk_used,
+        "disk_total": metric.disk_total,
+        "net_bytes_sent": metric.net_bytes_sent,
+        "net_bytes_recv": metric.net_bytes_recv,
+        "net_upload_rate": metric.net_upload_rate,
+        "net_download_rate": metric.net_download_rate,
+        "active_processes": metric.active_processes,
+        "server_uptime": metric.server_uptime,
+        "server_uptime_label": human_uptime(metric.server_uptime),
+        "created_at": metric.created_at.isoformat() if metric.created_at else None,
+        "created_at_label": local_datetime(metric.created_at),
+    }
+
+
+def metrics_history_to_chart(metrics: list[InfrastructureMetric]) -> dict[str, Any]:
+    """Build infrastructure chart datasets from stored metric samples."""
+    return {
+        "labels": [local_datetime(metric.created_at) for metric in metrics],
+        "cpu": [metric.cpu_percent for metric in metrics],
+        "memory": [metric.memory_percent for metric in metrics],
+        "disk": [metric.disk_percent for metric in metrics],
+        "network_in": [metric.net_download_rate for metric in metrics],
+        "network_out": [metric.net_upload_rate for metric in metrics],
+        "processes": [metric.active_processes for metric in metrics],
+    }
 
 
 def populate_asset_from_form(asset: Asset, form: AssetForm) -> None:
@@ -1519,10 +1742,12 @@ def refresh_site_uptime_metrics(site: MonitoredSite) -> None:
 
 
 def run_due_uptime_checks() -> None:
-    """Run checks for active sites older than five minutes."""
-    threshold = datetime.now(UTC) - timedelta(minutes=5)
+    """Run checks for active sites according to their configured interval."""
+    now = datetime.now(UTC)
     sites = MonitoredSite.query.filter_by(active=True).all()
     for site in sites:
+        interval = max(int(site.monitor_interval_minutes or 5), 1)
+        threshold = now - timedelta(minutes=interval)
         if site.last_check is None or _aware_datetime(site.last_check) <= threshold:
             run_uptime_check(site)
     db.session.commit()

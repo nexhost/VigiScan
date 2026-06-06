@@ -40,4 +40,41 @@
       card.style.setProperty("--mouse-y", `${y}%`);
     });
   });
+
+  document.querySelectorAll("[data-count]").forEach((node) => {
+    const target = Number(node.dataset.count);
+    if (!Number.isFinite(target)) {
+      return;
+    }
+    const decimals = String(node.dataset.count).includes(".") ? 1 : 0;
+    const duration = 720;
+    const startedAt = performance.now();
+    const tick = (now) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      node.textContent = (target * eased).toFixed(decimals);
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        node.textContent = target.toFixed(decimals);
+      }
+    };
+    requestAnimationFrame(tick);
+  });
+
+  document.querySelectorAll("[title]").forEach((node) => {
+    node.setAttribute("data-bs-toggle", node.getAttribute("data-bs-toggle") || "tooltip");
+  });
+
+  if (window.bootstrap?.Tooltip) {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((node) => {
+      window.bootstrap.Tooltip.getOrCreateInstance(node);
+    });
+  }
+
+  window.requestAnimationFrame(() => {
+    document.querySelectorAll(".skeleton-loading").forEach((node) => {
+      node.classList.remove("skeleton-loading");
+    });
+  });
 })();

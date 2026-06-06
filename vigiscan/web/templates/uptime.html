@@ -7,55 +7,19 @@
 <section class="uptime-page animate-in">
   <div class="uptime-status-strip">
     <div class="uptime-status-copy">
-      <span class="status-square">✓</span>
+      <span class="status-square">OK</span>
       <strong>{% if stats.all_operational %}All systems operational{% else %}Systems require attention{% endif %}</strong>
     </div>
     <span>last updated at {{ stats.latest_update }}</span>
   </div>
 
   <div class="uptime-kpi-band">
-    <article class="uptime-kpi">
-      <span class="uptime-icon icon-total"></span>
-      <div>
-        <strong>{{ stats.total_sites }}</strong>
-        <small>All Systems</small>
-      </div>
-    </article>
-    <article class="uptime-kpi">
-      <span class="uptime-icon icon-up">↑</span>
-      <div>
-        <strong>{{ stats.up_sites }}</strong>
-        <small>Up Systems</small>
-      </div>
-    </article>
-    <article class="uptime-kpi">
-      <span class="uptime-icon icon-down">↓</span>
-      <div>
-        <strong>{{ stats.down_sites }}</strong>
-        <small>Down Systems</small>
-      </div>
-    </article>
-    <article class="uptime-kpi">
-      <span class="uptime-icon icon-ssl">◆</span>
-      <div>
-        <strong>{{ stats.ssl_valid }}</strong>
-        <small>Valid SSL</small>
-      </div>
-    </article>
-    <article class="uptime-kpi">
-      <span class="uptime-icon icon-warn">?</span>
-      <div>
-        <strong>{{ stats.ssl_expired }}</strong>
-        <small>Invalid SSL</small>
-      </div>
-    </article>
-    <article class="uptime-kpi">
-      <span class="uptime-icon icon-alert">!</span>
-      <div>
-        <strong>{{ stats.down_sites + stats.ssl_expired }}</strong>
-        <small>SSL Not Exists</small>
-      </div>
-    </article>
+    <article class="uptime-kpi"><span class="uptime-icon icon-total"></span><div><strong data-count="{{ stats.total_sites }}">{{ stats.total_sites }}</strong><small>All Systems</small></div></article>
+    <article class="uptime-kpi"><span class="uptime-icon icon-up">UP</span><div><strong data-count="{{ stats.up_sites }}">{{ stats.up_sites }}</strong><small>Up Systems</small></div></article>
+    <article class="uptime-kpi"><span class="uptime-icon icon-down">DN</span><div><strong data-count="{{ stats.down_sites }}">{{ stats.down_sites }}</strong><small>Down Systems</small></div></article>
+    <article class="uptime-kpi"><span class="uptime-icon icon-ssl">SSL</span><div><strong data-count="{{ stats.ssl_valid }}">{{ stats.ssl_valid }}</strong><small>Valid SSL</small></div></article>
+    <article class="uptime-kpi"><span class="uptime-icon icon-warn">!</span><div><strong data-count="{{ stats.ssl_expired }}">{{ stats.ssl_expired }}</strong><small>Invalid SSL</small></div></article>
+    <article class="uptime-kpi"><span class="uptime-icon icon-alert">!</span><div><strong data-count="{{ stats.down_sites + stats.ssl_expired }}">{{ stats.down_sites + stats.ssl_expired }}</strong><small>SSL Not Exists</small></div></article>
   </div>
 
   <div class="uptime-dashboard-grid">
@@ -66,18 +30,14 @@
       </div>
       <strong>all time</strong>
     </article>
-
     <article class="uptime-panel uptime-chart-wide">
       <div class="uptime-legend">
         <span><i class="legend-min"></i>{{ stats.min_response_time }} ms <small>Min. Response Time</small></span>
         <span><i class="legend-avg"></i>{{ stats.avg_response_time }} ms <small>Avg. Response Time</small></span>
         <span><i class="legend-max"></i>{{ stats.max_response_time }} ms <small>Max. Response Time</small></span>
       </div>
-      <div class="uptime-chart-shell">
-        <canvas id="responseChart" aria-label="Respuesta promedio"></canvas>
-      </div>
+      <div class="uptime-chart-shell"><canvas id="responseChart" aria-label="Respuesta promedio"></canvas></div>
     </article>
-
     <article class="uptime-panel uptime-world-panel">
       <h2>World Map</h2>
       <div class="uptime-globe" aria-label="Mapa mundial">
@@ -89,56 +49,34 @@
   </div>
 
   <div class="uptime-secondary-grid">
-    <article class="uptime-panel">
-      <div class="uptime-panel-head">
-        <span>Availability 24h</span>
-        <small>5 min checks</small>
-      </div>
-      <div class="uptime-mini-chart">
-        <canvas id="availability24Chart" aria-label="Disponibilidad 24 horas"></canvas>
-      </div>
-    </article>
-    <article class="uptime-panel">
-      <div class="uptime-panel-head">
-        <span>Availability 7d</span>
-        <small>% uptime</small>
-      </div>
-      <div class="uptime-mini-chart">
-        <canvas id="availability7Chart" aria-label="Disponibilidad siete dias"></canvas>
-      </div>
-    </article>
-    <article class="uptime-panel">
-      <div class="uptime-panel-head">
-        <span>Availability 30d</span>
-        <small>% uptime</small>
-      </div>
-      <div class="uptime-mini-chart">
-        <canvas id="availability30Chart" aria-label="Disponibilidad treinta dias"></canvas>
-      </div>
-    </article>
-    <article class="uptime-panel">
-      <div class="uptime-panel-head">
-        <span>Down Trend</span>
-        <small>7 days</small>
-      </div>
-      <div class="uptime-mini-chart">
-        <canvas id="downTrendChart" aria-label="Tendencia de caidas"></canvas>
-      </div>
-    </article>
+    <article class="uptime-panel"><div class="uptime-panel-head"><span>Availability 24h</span><small>interval checks</small></div><div class="uptime-mini-chart"><canvas id="availability24Chart" aria-label="Disponibilidad 24 horas"></canvas></div></article>
+    <article class="uptime-panel"><div class="uptime-panel-head"><span>Availability 7d</span><small>% uptime</small></div><div class="uptime-mini-chart"><canvas id="availability7Chart" aria-label="Disponibilidad siete dias"></canvas></div></article>
+    <article class="uptime-panel"><div class="uptime-panel-head"><span>Availability 30d</span><small>% uptime</small></div><div class="uptime-mini-chart"><canvas id="availability30Chart" aria-label="Disponibilidad treinta dias"></canvas></div></article>
+    <article class="uptime-panel"><div class="uptime-panel-head"><span>Down Trend</span><small>7 days</small></div><div class="uptime-mini-chart"><canvas id="downTrendChart" aria-label="Tendencia de caidas"></canvas></div></article>
   </div>
 
-  <div class="uptime-toolbar">
-    <div>
-      <small>ALL</small>
-      <strong>Systems</strong>
+  <section class="uptime-panel infra-health-panel animate-in delay-2">
+    <div class="uptime-panel-head">
+      <span>Server Health</span>
+      <small>CPU, RAM, disco, red y uptime del host</small>
     </div>
+    <p class="infra-health-copy">Estas metricas pertenecen al servidor donde corre VigiScan y ayudan a separar incidentes de aplicacion de problemas de infraestructura.</p>
+    <div class="infra-mini-grid">
+      <article><span>CPU</span><strong data-count="{{ infra.cpu_percent }}">{{ infra.cpu_percent }}</strong><small>%</small></article>
+      <article><span>RAM</span><strong data-count="{{ infra.memory_percent }}">{{ infra.memory_percent }}</strong><small>%</small></article>
+      <article><span>Disk</span><strong data-count="{{ infra.disk_percent }}">{{ infra.disk_percent }}</strong><small>%</small></article>
+      <article><span>Bandwidth In</span><strong>{{ infra.net_download_rate }}</strong><small>MB/s</small></article>
+      <article><span>Bandwidth Out</span><strong>{{ infra.net_upload_rate }}</strong><small>MB/s</small></article>
+      <article><span>Server Uptime</span><strong>{{ infra.server_uptime_label }}</strong></article>
+    </div>
+    <a class="btn btn-sm uptime-add-btn" href="{{ url_for('main.infrastructure') }}">Ver infraestructura</a>
+  </section>
+
+  <div class="uptime-toolbar">
+    <div><small>ALL</small><strong>Systems</strong></div>
     <div class="uptime-toolbar-actions">
-      <button class="btn uptime-add-btn" type="button" data-bs-toggle="collapse" data-bs-target="#newUptimeSite" aria-expanded="false" aria-controls="newUptimeSite">+ Add monitor</button>
-      <label class="uptime-switch">
-        <input id="cardModeToggle" type="checkbox">
-        <span></span>
-        Card Mode
-      </label>
+      <button class="btn uptime-add-btn" type="button" data-bs-toggle="collapse" data-bs-target="#newUptimeSite" aria-expanded="false" aria-controls="newUptimeSite">Add monitor</button>
+      <label class="uptime-switch"><input id="cardModeToggle" type="checkbox"><span></span>Card Mode</label>
     </div>
   </div>
 
@@ -146,24 +84,15 @@
     <section class="uptime-panel uptime-form-panel">
       <form class="uptime-form" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <div>
-          {{ form.name.label(class="form-label") }}
-          {{ form.name(class="form-control cyber-input", placeholder="Portal principal") }}
-          {% for error in form.name.errors %}
-          <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
-        </div>
-        <div>
-          {{ form.url.label(class="form-label") }}
-          {{ form.url(class="form-control cyber-input", placeholder="https://example.com") }}
-          {% for error in form.url.errors %}
-          <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
-        </div>
-        <label class="uptime-active-option">
-          {{ form.active() }}
-          {{ form.active.label.text }}
-        </label>
+        <div>{{ form.name.label(class="form-label") }}{{ form.name(class="form-control cyber-input", placeholder="Portal principal") }}{% for error in form.name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+        <div>{{ form.url.label(class="form-label") }}{{ form.url(class="form-control cyber-input", placeholder="https://example.com") }}{% for error in form.url.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+        <div>{{ form.environment.label(class="form-label") }}{{ form.environment(class="form-select cyber-input") }}</div>
+        <div>{{ form.responsible.label(class="form-label") }}{{ form.responsible(class="form-control cyber-input", placeholder="SOC / DevOps") }}</div>
+        <div>{{ form.country.label(class="form-label") }}{{ form.country(class="form-control cyber-input", placeholder="DO") }}</div>
+        <div>{{ form.criticality.label(class="form-label") }}{{ form.criticality(class="form-select cyber-input") }}</div>
+        <div>{{ form.monitor_interval_minutes.label(class="form-label") }}{{ form.monitor_interval_minutes(class="form-control cyber-input", min="1", max="1440") }}</div>
+        <div class="uptime-form-wide">{{ form.notes.label(class="form-label") }}{{ form.notes(class="form-control cyber-input", rows="2", placeholder="Notas operativas") }}</div>
+        <label class="uptime-active-option">{{ form.active() }}{{ form.active.label.text }}</label>
         {{ form.submit_site(class="btn uptime-add-btn") }}
       </form>
     </section>
@@ -174,13 +103,18 @@
       <table class="table uptime-table align-middle mb-0">
         <thead>
           <tr>
-            <th>Website</th>
+            <th>Nombre</th>
+            <th>URL</th>
+            <th>Estado</th>
+            <th>HTTP Status</th>
             <th>SSL</th>
-            <th>Uptime</th>
-            <th>Status Code</th>
-            <th>Avg. Response Time</th>
+            <th>Uptime %</th>
+            <th>Avg response</th>
+            <th>Ultimo chequeo</th>
+            <th>Ambiente</th>
+            <th>Criticidad</th>
             <th>History (last 30 checks)</th>
-            <th class="text-end">Status</th>
+            <th class="text-end">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -188,63 +122,46 @@
           {% set site = row.site %}
           {% set last = row.last %}
           <tr>
+            <td><div class="uptime-website"><span class="site-favicon">{{ site.name[:1].upper() }}</span><div><strong>{{ site.name }}</strong><small>{{ site.responsible or "Sin responsable" }}</small></div></div></td>
+            <td class="text-break"><small>{{ site.url }}</small></td>
             <td>
-              <div class="uptime-website">
-                <form method="post" action="{{ url_for('main.uptime_check', site_id=site.id) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="uptime-expand" type="submit" title="Chequear ahora">⌄</button>
-                </form>
-                <span class="site-favicon">{{ site.name[:1].upper() }}</span>
-                <div>
-                  <strong>{{ site.name }}</strong>
-                  <small>{{ site.url }}</small>
-                </div>
-              </div>
+              {% if not site.active %}<span class="uptime-pill pill-muted">PAUSED</span>
+              {% elif last and last.up %}<span class="uptime-pill pill-valid">UP</span>
+              {% elif last %}<span class="uptime-pill pill-danger">DOWN</span>
+              {% else %}<span class="uptime-pill pill-muted">NO DATA</span>{% endif %}
             </td>
             <td>
-              {% if site.ssl_enabled and last and last.ssl_valid %}
-              <span class="uptime-pill pill-valid">VALID</span>
-              {% elif site.ssl_enabled %}
-              <span class="uptime-pill pill-danger">INVALID</span>
-              {% else %}
-              <span class="uptime-pill pill-muted">NO TLS</span>
-              {% endif %}
+              {% if last and last.up %}<span class="uptime-pill pill-code">{{ row.status_label }}</span>
+              {% elif last %}<span class="uptime-pill pill-danger">{{ row.status_label }}</span>
+              {% else %}<span class="uptime-pill pill-muted">NO DATA</span>{% endif %}
+            </td>
+            <td>
+              {% if site.ssl_enabled and last and last.ssl_valid %}<span class="uptime-pill pill-valid">VALID</span>
+              {% elif site.ssl_enabled %}<span class="uptime-pill pill-danger">INVALID</span>
+              {% else %}<span class="uptime-pill pill-muted">NO TLS</span>{% endif %}
             </td>
             <td><span class="uptime-pill pill-uptime">{{ site.uptime_percentage }}%</span></td>
-            <td>
-              {% if last and last.up %}
-              <span class="uptime-pill pill-code">{{ row.status_label }}</span>
-              {% elif last %}
-              <span class="uptime-pill pill-danger">{{ row.status_label }}</span>
-              {% else %}
-              <span class="uptime-pill pill-muted">NO DATA</span>
-              {% endif %}
-            </td>
             <td><span class="uptime-pill pill-time">{{ site.avg_response_time }} ms</span></td>
-            <td>
-              <div class="uptime-history" aria-label="Historial de {{ site.name }}">
-                {% for item in row.history %}
-                <span class="history-bar history-{{ item }}"></span>
-                {% endfor %}
-              </div>
-            </td>
+            <td><span class="uptime-pill pill-muted">{{ local_datetime(site.last_check) }}</span></td>
+            <td><span class="uptime-pill pill-muted">{{ site.environment }}</span></td>
+            <td><span class="uptime-pill pill-code">{{ site.criticality }}</span></td>
+            <td><div class="uptime-history" aria-label="Historial de {{ site.name }}">{% for item in row.history %}<span class="history-bar history-{{ item }}"></span>{% endfor %}</div></td>
             <td class="text-end">
-              {% if last and last.up %}
-              <span class="uptime-status-dot status-ok">✓</span>
-              <span class="visually-hidden">En linea</span>
-              {% elif last %}
-              <span class="uptime-status-dot status-bad">!</span>
-              <span class="visually-hidden">Caido</span>
-              {% else %}
-              <span class="uptime-status-dot status-idle">?</span>
-              <span class="visually-hidden">Sin datos</span>
-              {% endif %}
+              <div class="uptime-action-row">
+                <form method="post" action="{{ url_for('main.uptime_check', site_id=site.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="uptime-icon-btn" type="submit" title="Chequear ahora">Check</button></form>
+                <a class="uptime-icon-btn" href="{{ url_for('main.uptime_edit', site_id=site.id) }}" title="Editar">Edit</a>
+                {% if site.active %}
+                <form method="post" action="{{ url_for('main.uptime_pause', site_id=site.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="uptime-icon-btn" type="submit" title="Pausar">Pause</button></form>
+                {% else %}
+                <form method="post" action="{{ url_for('main.uptime_resume', site_id=site.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="uptime-icon-btn" type="submit" title="Reanudar">Resume</button></form>
+                {% endif %}
+                <form method="post" action="{{ url_for('main.uptime_delete', site_id=site.id) }}" onsubmit="return confirm('Eliminar monitor?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="uptime-icon-btn danger" type="submit" title="Eliminar">Delete</button></form>
+              </div>
+              <span class="visually-hidden">{% if last and last.up %}En linea{% elif last %}Caido{% else %}Sin datos{% endif %}</span>
             </td>
           </tr>
           {% else %}
-          <tr>
-            <td colspan="7" class="uptime-empty">Sin sitios monitoreados.</td>
-          </tr>
+          <tr><td colspan="12" class="uptime-empty">Sin sitios monitoreados.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -257,8 +174,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
   const uptimeCharts = {{ charts | tojson }};
-  Chart.defaults.color = "#a9bdc7";
-  Chart.defaults.borderColor = "rgba(77, 132, 150, 0.22)";
+  Chart.defaults.color = "#6f7a89";
+  Chart.defaults.borderColor = "rgba(23, 37, 84, 0.12)";
 
   function uptimeLine(id, data, label, color, maxValue = undefined) {
     new Chart(document.getElementById(id), {
@@ -280,7 +197,7 @@
       options: {
         maintainAspectRatio: false,
         scales: {
-          x: { grid: { color: "rgba(77, 132, 150, 0.1)" } },
+          x: { grid: { color: "rgba(23, 37, 84, 0.08)" } },
           y: { beginAtZero: true, suggestedMax: maxValue }
         },
         plugins: { legend: { display: false } }
@@ -296,7 +213,7 @@
         datasets: [{
           label,
           data: data.values,
-          backgroundColor: "rgba(255, 112, 112, 0.82)",
+          backgroundColor: "rgba(239, 68, 68, 0.82)",
           borderRadius: 3
         }]
       },
@@ -311,10 +228,10 @@
     });
   }
 
-  uptimeLine("availability24Chart", uptimeCharts.availability_24h, "Disponibilidad", "#20d45a", 100);
-  uptimeLine("availability7Chart", uptimeCharts.availability_7d, "Disponibilidad", "#37a8ff", 100);
-  uptimeLine("availability30Chart", uptimeCharts.availability_30d, "Disponibilidad", "#00d7a7", 100);
-  uptimeLine("responseChart", uptimeCharts.avg_response, "Respuesta", "#ff4d4d");
+  uptimeLine("availability24Chart", uptimeCharts.availability_24h, "Disponibilidad", "#16a34a", 100);
+  uptimeLine("availability7Chart", uptimeCharts.availability_7d, "Disponibilidad", "#2563eb", 100);
+  uptimeLine("availability30Chart", uptimeCharts.availability_30d, "Disponibilidad", "#0891b2", 100);
+  uptimeLine("responseChart", uptimeCharts.avg_response, "Respuesta", "#ef4444");
   uptimeBar("downTrendChart", uptimeCharts.down_trend, "Caidas");
 
   const cardModeToggle = document.getElementById("cardModeToggle");

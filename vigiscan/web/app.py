@@ -94,6 +94,7 @@ def init_database() -> None:
     _ensure_user_profile_columns()
     _ensure_scan_asset_column()
     _ensure_asset_columns()
+    _ensure_monitored_site_columns()
     _ensure_default_system_settings()
     username = str(current_app.config["VIGISCAN_ADMIN_USERNAME"])
     password = str(current_app.config["VIGISCAN_ADMIN_PASSWORD"])
@@ -157,11 +158,42 @@ def _ensure_asset_columns() -> None:
         "domain": "ALTER TABLE assets ADD COLUMN domain VARCHAR(255)",
         "ip_address": "ALTER TABLE assets ADD COLUMN ip_address VARCHAR(80)",
         "url": "ALTER TABLE assets ADD COLUMN url VARCHAR(2048)",
+        "owner": "ALTER TABLE assets ADD COLUMN owner VARCHAR(160)",
         "country": "ALTER TABLE assets ADD COLUMN country VARCHAR(120)",
         "criticality": "ALTER TABLE assets ADD COLUMN criticality VARCHAR(40) DEFAULT 'Media'",
         "status": "ALTER TABLE assets ADD COLUMN status VARCHAR(40) DEFAULT 'Activo'",
         "technology": "ALTER TABLE assets ADD COLUMN technology VARCHAR(160)",
+        "environment": "ALTER TABLE assets ADD COLUMN environment VARCHAR(80)",
         "notes": "ALTER TABLE assets ADD COLUMN notes TEXT",
+    }
+    for column, statement in migrations.items():
+        if column not in existing:
+            db.session.execute(text(statement))
+    db.session.commit()
+
+
+def _ensure_monitored_site_columns() -> None:
+    """Add uptime monitor metadata columns for existing SQLite installations."""
+    inspector = inspect(db.engine)
+    if "monitored_sites" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("monitored_sites")}
+    migrations = {
+        "environment": (
+            "ALTER TABLE monitored_sites ADD COLUMN environment "
+            "VARCHAR(80) DEFAULT 'Produccion' NOT NULL"
+        ),
+        "responsible": "ALTER TABLE monitored_sites ADD COLUMN responsible VARCHAR(160)",
+        "country": "ALTER TABLE monitored_sites ADD COLUMN country VARCHAR(120)",
+        "criticality": (
+            "ALTER TABLE monitored_sites ADD COLUMN criticality "
+            "VARCHAR(40) DEFAULT 'Media' NOT NULL"
+        ),
+        "monitor_interval_minutes": (
+            "ALTER TABLE monitored_sites ADD COLUMN monitor_interval_minutes "
+            "INTEGER DEFAULT 5 NOT NULL"
+        ),
+        "notes": "ALTER TABLE monitored_sites ADD COLUMN notes TEXT",
     }
     for column, statement in migrations.items():
         if column not in existing:

@@ -100,6 +100,12 @@ class MonitoredSite(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    environment: Mapped[str] = mapped_column(String(80), default="Produccion", nullable=False)
+    responsible: Mapped[str | None] = mapped_column(String(160))
+    country: Mapped[str | None] = mapped_column(String(120))
+    criticality: Mapped[str] = mapped_column(String(40), default="Media", nullable=False)
+    monitor_interval_minutes: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     ssl_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     uptime_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
@@ -114,6 +120,32 @@ class MonitoredSite(db.Model):
         back_populates="site",
         cascade="all, delete-orphan",
         order_by="UptimeCheck.checked_at",
+    )
+
+
+class InfrastructureMetric(db.Model):
+    """Server infrastructure metrics captured from the VigiScan host."""
+
+    __tablename__ = "infrastructure_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cpu_percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    memory_percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    memory_used: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    memory_total: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    disk_percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    disk_used: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    disk_total: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    net_bytes_sent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    net_bytes_recv: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    net_upload_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    net_download_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    active_processes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    server_uptime: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
 

@@ -39,9 +39,13 @@
           <span class="nav-icon">A</span>
           Assets
         </a>
-        <a class="{% if request.endpoint in ['main.uptime', 'main.uptime_check'] %}active{% endif %}" href="{{ url_for('main.uptime') }}">
+        <a class="{% if request.endpoint in ['main.uptime', 'main.uptime_check', 'main.uptime_edit'] %}active{% endif %}" href="{{ url_for('main.uptime') }}">
           <span class="nav-icon">U</span>
           Uptime Monitor
+        </a>
+        <a class="{% if request.endpoint == 'main.infrastructure' %}active{% endif %}" href="{{ url_for('main.infrastructure') }}">
+          <span class="nav-icon">M</span>
+          Infrastructure Monitor
         </a>
         <a class="{% if request.endpoint in ['main.iocs', 'main.ioc_new', 'main.ioc_detail', 'main.ioc_edit'] %}active{% endif %}" href="{{ url_for('main.iocs') }}">
           <span class="nav-icon">I</span>

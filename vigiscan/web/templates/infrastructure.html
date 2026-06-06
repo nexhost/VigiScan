@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Infrastructure Monitor - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Infrastructure Monitor</span>
+    <h1>Server Health</h1>
+    <p>Telemetria local del servidor donde corre VigiScan: CPU, memoria, disco, red, uptime y procesos.</p>
+  </div>
+  <a class="btn btn-glow" href="{{ url_for('main.uptime') }}">Uptime Monitor</a>
+</section>
+
+<section class="metric-grid infra-metric-grid">
+  <article class="metric-card saas-card animate-in">
+    <div class="metric-label">CPU</div>
+    <div class="metric-value"><span data-count="{{ metric.cpu_percent }}">{{ metric.cpu_percent }}</span>%</div>
+    <div class="metric-caption">Uso actual del procesador</div>
+  </article>
+  <article class="metric-card saas-card animate-in delay-1">
+    <div class="metric-label">Memory</div>
+    <div class="metric-value"><span data-count="{{ metric.memory_percent }}">{{ metric.memory_percent }}</span>%</div>
+    <div class="metric-caption">{{ metric.memory_used }} GB / {{ metric.memory_total }} GB</div>
+  </article>
+  <article class="metric-card saas-card animate-in delay-2">
+    <div class="metric-label">Disk</div>
+    <div class="metric-value"><span data-count="{{ metric.disk_percent }}">{{ metric.disk_percent }}</span>%</div>
+    <div class="metric-caption">{{ metric.disk_used }} GB / {{ metric.disk_total }} GB</div>
+  </article>
+  <article class="metric-card saas-card animate-in delay-3">
+    <div class="metric-label">Network In</div>
+    <div class="metric-value">{{ metric.net_download_rate }}</div>
+    <div class="metric-caption">MB/s download</div>
+  </article>
+  <article class="metric-card saas-card animate-in">
+    <div class="metric-label">Network Out</div>
+    <div class="metric-value">{{ metric.net_upload_rate }}</div>
+    <div class="metric-caption">MB/s upload</div>
+  </article>
+  <article class="metric-card saas-card animate-in delay-1">
+    <div class="metric-label">Server Uptime</div>
+    <div class="metric-date">{{ metric.server_uptime_label }}</div>
+    <div class="metric-caption">Tiempo desde el ultimo reinicio</div>
+  </article>
+  <article class="metric-card saas-card animate-in delay-2">
+    <div class="metric-label">Active Processes</div>
+    <div class="metric-value"><span data-count="{{ metric.active_processes }}">{{ metric.active_processes }}</span></div>
+    <div class="metric-caption">Procesos del sistema</div>
+  </article>
+</section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="glass-panel h-100 animate-in">
+      <div class="panel-heading"><span>CPU / Memory</span><small>Historico reciente</small></div>
+      <div class="chart-panel"><canvas id="infraCpuMemoryChart" aria-label="CPU y memoria"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading"><span>Network In/Out</span><small>MB/s</small></div>
+      <div class="chart-panel"><canvas id="infraNetworkChart" aria-label="Red entrada y salida"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading"><span>Disk Usage</span><small>% ocupado</small></div>
+      <div class="chart-panel"><canvas id="infraDiskChart" aria-label="Disco"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="glass-panel h-100 animate-in delay-3">
+      <div class="panel-heading"><span>Processes</span><small>Conteo activo</small></div>
+      <div class="chart-panel"><canvas id="infraProcessChart" aria-label="Procesos activos"></canvas></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+  const infraHistory = {{ history | tojson }};
+  Chart.defaults.color = "#6f7a89";
+  Chart.defaults.borderColor = "rgba(23, 37, 84, 0.12)";
+
+  function infraLine(id, datasets) {
+    new Chart(document.getElementById(id), {
+      type: "line",
+      data: { labels: infraHistory.labels, datasets },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: { y: { beginAtZero: true }, x: { grid: { display: false } } },
+        plugins: { legend: { labels: { boxWidth: 10 } } }
+      }
+    });
+  }
+
+  infraLine("infraCpuMemoryChart", [
+    { label: "CPU %", data: infraHistory.cpu, borderColor: "#2563eb", backgroundColor: "rgba(37, 99, 235, 0.12)", tension: 0.35, fill: true },
+    { label: "Memory %", data: infraHistory.memory, borderColor: "#10b981", backgroundColor: "rgba(16, 185, 129, 0.12)", tension: 0.35, fill: true }
+  ]);
+  infraLine("infraNetworkChart", [
+    { label: "Network In", data: infraHistory.network_in, borderColor: "#0ea5e9", backgroundColor: "rgba(14, 165, 233, 0.12)", tension: 0.35, fill: true },
+    { label: "Network Out", data: infraHistory.network_out, borderColor: "#f97316", backgroundColor: "rgba(249, 115, 22, 0.12)", tension: 0.35, fill: true }
+  ]);
+  infraLine("infraDiskChart", [
+    { label: "Disk %", data: infraHistory.disk, borderColor: "#8b5cf6", backgroundColor: "rgba(139, 92, 246, 0.12)", tension: 0.35, fill: true }
+  ]);
+  infraLine("infraProcessChart", [
+    { label: "Active Processes", data: infraHistory.processes, borderColor: "#ef4444", backgroundColor: "rgba(239, 68, 68, 0.12)", tension: 0.35, fill: true }
+  ]);
+</script>
+{% endblock %}

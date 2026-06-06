@@ -12,6 +12,76 @@
   <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">Nuevo escaneo</a>
 </section>
 
+<section class="executive-dashboard animate-in delay-1">
+  <div class="executive-heading">
+    <div>
+      <span class="eyebrow">Performance overview</span>
+      <h2>Good Afternoon, {{ current_user.display_name or current_user.username }}!</h2>
+    </div>
+    {% if total_scans == 0 %}
+    <span class="sample-badge">Sample data</span>
+    {% endif %}
+  </div>
+  <div class="executive-card-grid">
+    <article class="executive-card accent-blue" data-tooltip="Postura defensiva agregada">
+      <small>Month to date</small>
+      <span>Security Score</span>
+      <strong data-count="{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}">{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}</strong>
+      <canvas class="sparkline" data-values="62,68,66,74,71,79,76,82"></canvas>
+      <em>+ 6.1%</em>
+    </article>
+    <article class="executive-card accent-green" data-tooltip="Escaneos acumulados">
+      <small>Month to date</small>
+      <span>Total Scans</span>
+      <strong data-count="{{ total_scans }}">{{ total_scans }}</strong>
+      <canvas class="sparkline" data-values="{{ scans_by_day_chart['values']|join(',') }}"></canvas>
+      <em>+ 5.1%</em>
+    </article>
+    <article class="executive-card accent-red" data-tooltip="Hallazgos criticos">
+      <small>Month to date</small>
+      <span>Critical Findings</span>
+      <strong data-count="{{ dashboard_stats.critical_findings }}">{{ dashboard_stats.critical_findings }}</strong>
+      <canvas class="sparkline" data-values="1,0,1,2,1,3,2,4"></canvas>
+      <em class="danger">+ 2%</em>
+    </article>
+    <article class="executive-card accent-orange" data-tooltip="Hallazgos de severidad alta">
+      <small>Month to date</small>
+      <span>High Findings</span>
+      <strong data-count="{{ dashboard_stats.high_findings }}">{{ dashboard_stats.high_findings }}</strong>
+      <canvas class="sparkline" data-values="4,5,5,6,4,7,6,8"></canvas>
+      <em class="danger">+ 3.4%</em>
+    </article>
+    <article class="executive-card accent-cyan" data-tooltip="Assets inventariados">
+      <small>Month to date</small>
+      <span>Assets Monitored</span>
+      <strong data-count="{{ overview_stats.total_assets }}">{{ overview_stats.total_assets }}</strong>
+      <canvas class="sparkline" data-values="2,3,3,5,6,6,7,8"></canvas>
+      <em>+ 12%</em>
+    </article>
+    <article class="executive-card accent-green" data-tooltip="Disponibilidad promedio">
+      <small>Month to date</small>
+      <span>Uptime Global</span>
+      <strong>{{ platform_stats.average_uptime }}%</strong>
+      <canvas class="sparkline" data-values="92,95,97,94,98,99,98,99"></canvas>
+      <em>+ 2%</em>
+    </article>
+    <article class="executive-card accent-purple" data-tooltip="Coincidencias CVE">
+      <small>Month to date</small>
+      <span>CVE Detected</span>
+      <strong data-count="{{ dashboard_stats.cve_detected }}">{{ dashboard_stats.cve_detected }}</strong>
+      <canvas class="sparkline" data-values="0,1,1,2,2,3,4,4"></canvas>
+      <em class="danger">+ 3.4%</em>
+    </article>
+    <article class="executive-card accent-blue" data-tooltip="Resultados en cache de Threat Intelligence">
+      <small>Month to date</small>
+      <span>VirusTotal Alerts</span>
+      <strong data-count="{{ vt_summary.cached_results }}">{{ vt_summary.cached_results }}</strong>
+      <canvas class="sparkline" data-values="1,1,2,2,3,3,4,5"></canvas>
+      <em>+ 2%</em>
+    </article>
+  </div>
+</section>
+
 <section class="scan-command glass-panel animate-in delay-1">
   <div>
     <span class="eyebrow">Quick scan</span>
@@ -23,6 +93,11 @@
     <input class="form-control cyber-input scan-url-input" name="target_url" type="url" placeholder="https://example.com" required>
     <button class="btn btn-glow" type="submit">Escanear ahora</button>
   </form>
+</section>
+
+<section class="dashboard-section-title animate-in">
+  <span class="eyebrow">Vulnerability overview</span>
+  <h2>OWASP Top 10 distribution, CVE severity trend y actividad de riesgo</h2>
 </section>
 
 <section class="metric-grid">
@@ -167,6 +242,11 @@
   </div>
 </section>
 
+<section class="dashboard-section-title animate-in">
+  <span class="eyebrow">Uptime summary</span>
+  <h2>Disponibilidad, SSL y cobertura operativa</h2>
+</section>
+
 <section class="row g-4 mb-4">
   <div class="col-lg-4">
     <div class="glass-panel h-100 animate-in">
@@ -214,6 +294,11 @@
   </div>
 </section>
 
+<section class="dashboard-section-title animate-in">
+  <span class="eyebrow">OWASP Top 10 distribution</span>
+  <h2>Vulnerabilidades agrupadas por categoria y severidad</h2>
+</section>
+
 <section class="row g-4 mb-4">
   <div class="col-lg-4">
     <div class="glass-panel h-100 animate-in delay-1">
@@ -248,6 +333,11 @@
       </div>
     </div>
   </div>
+</section>
+
+<section class="dashboard-section-title animate-in">
+  <span class="eyebrow">CVE severity trend</span>
+  <h2>Tendencias de CVE y riesgo alto</h2>
 </section>
 
 <section class="row g-4 mb-4">
@@ -319,6 +409,11 @@
 </section>
 
 <canvas id="severityChart" class="d-none" aria-hidden="true"></canvas>
+
+<section class="dashboard-section-title animate-in">
+  <span class="eyebrow">Recent reports</span>
+  <h2>Escaneos recientes, acciones y exportaciones</h2>
+</section>
 
 <section class="glass-panel animate-in delay-3">
   <div class="panel-heading">
@@ -504,6 +599,36 @@
       },
       plugins: { legend: { display: false } }
     }
+  });
+
+  document.querySelectorAll(".sparkline").forEach((canvas) => {
+    const values = (canvas.dataset.values || "")
+      .split(",")
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isFinite(value));
+    const data = values.length ? values : [1, 2, 1, 3, 2, 4];
+    const stroke = getComputedStyle(canvas.closest(".executive-card")).getPropertyValue("--accent").trim() || "#2563eb";
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: data.map((_item, index) => index + 1),
+        datasets: [{
+          data,
+          borderColor: stroke,
+          backgroundColor: `${stroke}1f`,
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.45,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { x: { display: false }, y: { display: false } },
+        plugins: { legend: { display: false }, tooltip: { enabled: false } }
+      }
+    });
   });
 </script>
 {% endblock %}

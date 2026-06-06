@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Uptime - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Uptime Monitor</span>
+    <h1>Editar monitor</h1>
+    <p>Actualiza contexto operativo, criticidad e intervalo de chequeo.</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_for('main.uptime') }}">Volver</a>
+</section>
+
+<section class="glass-panel animate-in delay-1">
+  <form class="asset-form-grid" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div>{{ form.name.label(class="form-label") }}{{ form.name(class="form-control cyber-input") }}</div>
+    <div>{{ form.url.label(class="form-label") }}{{ form.url(class="form-control cyber-input") }}</div>
+    <div>{{ form.environment.label(class="form-label") }}{{ form.environment(class="form-select cyber-input") }}</div>
+    <div>{{ form.responsible.label(class="form-label") }}{{ form.responsible(class="form-control cyber-input") }}</div>
+    <div>{{ form.country.label(class="form-label") }}{{ form.country(class="form-control cyber-input") }}</div>
+    <div>{{ form.criticality.label(class="form-label") }}{{ form.criticality(class="form-select cyber-input") }}</div>
+    <div>{{ form.monitor_interval_minutes.label(class="form-label") }}{{ form.monitor_interval_minutes(class="form-control cyber-input", min="1", max="1440") }}</div>
+    <label class="form-check align-self-end">
+      {{ form.active(class="form-check-input") }}
+      <span class="form-check-label">{{ form.active.label.text }}</span>
+    </label>
+    <div class="asset-form-wide">{{ form.notes.label(class="form-label") }}{{ form.notes(class="form-control cyber-input", rows="4") }}</div>
+    <div class="asset-form-actions">
+      {{ form.submit_site(class="btn btn-glow") }}
+      <a class="btn btn-ghost" href="{{ url_for('main.uptime') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -81,11 +81,40 @@ class PasswordChangeForm(FlaskForm):
 class MonitoredSiteForm(FlaskForm):
     """Create or update an uptime monitored site."""
 
-    name = StringField("Nombre", validators=[DataRequired(), Length(max=120)])
+    name = StringField("Nombre aplicacion", validators=[DataRequired(), Length(max=120)])
     url = URLField(
         "URL",
         validators=[DataRequired(), URL(require_tld=False), Length(max=2048)],
     )
+    environment = SelectField(
+        "Ambiente",
+        choices=[
+            ("Produccion", "Produccion"),
+            ("Staging", "Staging"),
+            ("Desarrollo", "Desarrollo"),
+            ("QA", "QA"),
+            ("Otro", "Otro"),
+        ],
+        default="Produccion",
+    )
+    responsible = StringField("Responsable", validators=[Optional(), Length(max=160)])
+    country = StringField("Pais", validators=[Optional(), Length(max=120)])
+    criticality = SelectField(
+        "Criticidad",
+        choices=[
+            ("Critica", "Critica"),
+            ("Alta", "Alta"),
+            ("Media", "Media"),
+            ("Baja", "Baja"),
+        ],
+        default="Media",
+    )
+    monitor_interval_minutes = IntegerField(
+        "Intervalo monitoreo (min)",
+        default=5,
+        validators=[Optional(), NumberRange(min=1, max=1440)],
+    )
+    notes = TextAreaField("Notas", validators=[Optional(), Length(max=4000)])
     active = BooleanField("Activo", default=True)
     submit_site = SubmitField("Guardar sitio")
 

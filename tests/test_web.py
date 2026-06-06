@@ -6,7 +6,7 @@ import pytest
 
 from vigiscan.modules.screenshot import ScreenshotResult
 from vigiscan.web.app import create_app
-from vigiscan.web.models import Asset, MonitoredSite, Scan, User, db
+from vigiscan.web.models import Asset, InfrastructureMetric, MonitoredSite, Scan, User, db
 
 
 @pytest.fixture()
@@ -174,6 +174,7 @@ def test_admin_can_login_and_view_dashboard(client):
     assert b"Nuevo Escaneo" in response.data
     assert b"Reportes" in response.data
     assert b"Uptime Monitor" in response.data
+    assert b"Infrastructure Monitor" in response.data
     assert b"Assets" in response.data
     assert b"IOC Center" in response.data
     assert b"Threat Intelligence / VirusTotal" in response.data
@@ -188,6 +189,7 @@ def test_requested_web_routes_are_available(client):
         "/scan/new",
         "/reports",
         "/uptime",
+        "/infrastructure",
         "/assets",
         "/iocs",
         "/threat-intel/virustotal",
@@ -198,6 +200,46 @@ def test_requested_web_routes_are_available(client):
     for path in expected_ok:
         response = client.get(path)
         assert response.status_code == 200, path
+
+
+def test_dashboard_uptime_and_infrastructure_apis_return_json(client, app, monkeypatch):
+    monkeypatch.setattr(
+        "vigiscan.web.routes.collect_metrics",
+        lambda: {
+            "cpu_percent": 12.5,
+            "memory_percent": 40.0,
+            "memory_used": 4.0,
+            "memory_total": 10.0,
+            "disk_percent": 55.0,
+            "disk_used": 50.0,
+            "disk_total": 100.0,
+            "net_bytes_sent": 1000,
+            "net_bytes_recv": 2000,
+            "net_upload_rate": 0.1,
+            "net_download_rate": 0.2,
+            "active_processes": 42,
+            "server_uptime": 3661,
+        },
+    )
+    login(client)
+
+    for path in [
+        "/api/dashboard/summary",
+        "/api/dashboard/charts",
+        "/api/uptime/summary",
+        "/api/uptime/history",
+        "/api/infrastructure/metrics",
+        "/api/infrastructure/history",
+    ]:
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert response.is_json, path
+
+    summary = client.get("/api/dashboard/summary").get_json()
+    assert summary["infrastructure"]["cpu_percent"] == 12.5
+    assert "overview" in summary
+    with app.app_context():
+        assert InfrastructureMetric.query.count() >= 1
 
 
 def test_login_updates_last_access(client, app):
@@ -484,6 +526,12 @@ def test_user_can_add_uptime_site_and_run_manual_check(client, app, monkeypatch)
         data={
             "name": "Portal",
             "url": "https://example.com",
+            "environment": "Produccion",
+            "responsible": "SOC",
+            "country": "DO",
+            "criticality": "Alta",
+            "monitor_interval_minutes": "10",
+            "notes": "Servicio critico",
             "active": "y",
             "submit_site": "Guardar sitio",
         },
@@ -501,7 +549,49 @@ def test_user_can_add_uptime_site_and_run_manual_check(client, app, monkeypatch)
     with app.app_context():
         site = MonitoredSite.query.one()
         assert site.uptime_percentage == 100.0
+        assert site.environment == "Produccion"
+        assert site.responsible == "SOC"
+        assert site.country == "DO"
+        assert site.criticality == "Alta"
+        assert site.monitor_interval_minutes == 10
         assert len(site.checks) == 2
+
+    pause_response = client.post("/uptime/1/pause", follow_redirects=True)
+    assert pause_response.status_code == 200
+    assert b"Monitor pausado." in pause_response.data
+
+    resume_response = client.post("/uptime/1/resume", follow_redirects=True)
+    assert resume_response.status_code == 200
+    assert b"Monitor reanudado." in resume_response.data
+
+    edit_response = client.post(
+        "/uptime/1/edit",
+        data={
+            "name": "Portal clientes",
+            "url": "https://example.com",
+            "environment": "Staging",
+            "responsible": "DevOps",
+            "country": "DO",
+            "criticality": "Media",
+            "monitor_interval_minutes": "15",
+            "active": "y",
+            "submit_site": "Guardar sitio",
+        },
+        follow_redirects=True,
+    )
+    assert edit_response.status_code == 200
+    assert b"Monitor uptime actualizado." in edit_response.data
+    with app.app_context():
+        site = MonitoredSite.query.one()
+        assert site.name == "Portal clientes"
+        assert site.environment == "Staging"
+        assert site.monitor_interval_minutes == 15
+
+    delete_response = client.post("/uptime/1/delete", follow_redirects=True)
+    assert delete_response.status_code == 200
+    assert b"Monitor eliminado." in delete_response.data
+    with app.app_context():
+        assert MonitoredSite.query.count() == 0
 
 
 def test_user_can_configure_virustotal_and_query_reputation(
