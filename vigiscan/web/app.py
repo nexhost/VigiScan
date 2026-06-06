@@ -120,7 +120,7 @@ def _ensure_user_profile_columns() -> None:
         "display_name": "ALTER TABLE users ADD COLUMN display_name VARCHAR(120)",
         "language_preference": (
             "ALTER TABLE users ADD COLUMN language_preference "
-            "VARCHAR(8) DEFAULT 'es' NOT NULL"
+            "VARCHAR(8) DEFAULT 'en' NOT NULL"
         ),
         "last_login_at": "ALTER TABLE users ADD COLUMN last_login_at DATETIME",
         "virustotal_api_key_encrypted": (

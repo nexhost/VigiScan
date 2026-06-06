@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Informe Ejecutivo de Seguridad Web - VigiScan</title>
+  <title>Executive Web Security Report - VigiScan</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/pdf.css') }}">
 </head>
 <body>
   <footer class="page-footer">
-    VigiScan · Desarrollado por Kendry Rosario · {{ generated_local }}
+    VigiScan - Developed by Kendry Rosario - {{ generated_local }}
   </footer>
 
   <section class="cover">
@@ -15,35 +15,17 @@
       <img class="logo" src="{{ logo_url }}" alt="VigiScan">
       <div>
         <p class="eyebrow">VigiScan Defensive Web Security Scanner</p>
-        <h1>Informe Ejecutivo de Seguridad Web</h1>
-        <p class="credit">Desarrollado por Kendry Rosario</p>
+        <h1>Executive Web Security Report</h1>
+        <p class="credit">Developed by Kendry Rosario</p>
       </div>
     </div>
     <div class="cover-grid">
-      <div>
-        <span>Objetivo</span>
-        <strong>{{ scan.target_url }}</strong>
-      </div>
-      <div>
-        <span>Organizacion</span>
-        <strong>{{ organization }}</strong>
-      </div>
-      <div>
-        <span>Pais</span>
-        <strong>{{ country }}</strong>
-      </div>
-      <div>
-        <span>Zona horaria</span>
-        <strong>{{ timezone }}</strong>
-      </div>
-      <div>
-        <span>Fecha local</span>
-        <strong>{{ generated_local }}</strong>
-      </div>
-      <div>
-        <span>Clasificacion</span>
-        <strong>{{ scan.risk_level or report.risk.level }}</strong>
-      </div>
+      <div><span>Target</span><strong>{{ scan.target_url }}</strong></div>
+      <div><span>Organization</span><strong>{{ organization }}</strong></div>
+      <div><span>Country</span><strong>{{ country }}</strong></div>
+      <div><span>Timezone</span><strong>{{ timezone }}</strong></div>
+      <div><span>Local date</span><strong>{{ generated_local }}</strong></div>
+      <div><span>Classification</span><strong>{{ scan.risk_level or report.risk.level }}</strong></div>
     </div>
     <div class="risk-hero">
       <span>Risk Score</span>
@@ -53,19 +35,19 @@
   </section>
 
   <section>
-    <h2>Resumen Ejecutivo</h2>
+    <h2>Executive Summary</h2>
     <p>{{ report.executive_summary.text }}</p>
     <div class="summary-grid">
-      <article><span>Criticos</span><strong>{{ severity_counts.Critical }}</strong></article>
-      <article><span>Altos</span><strong>{{ severity_counts.High + severity_counts.Alto }}</strong></article>
-      <article><span>Medios</span><strong>{{ severity_counts.Medium + severity_counts.Medio }}</strong></article>
-      <article><span>Bajos</span><strong>{{ severity_counts.Low + severity_counts.Bajo }}</strong></article>
+      <article><span>Critical</span><strong>{{ severity_counts.Critical }}</strong></article>
+      <article><span>High</span><strong>{{ severity_counts.High + severity_counts.Alto }}</strong></article>
+      <article><span>Medium</span><strong>{{ severity_counts.Medium + severity_counts.Medio }}</strong></article>
+      <article><span>Low</span><strong>{{ severity_counts.Low + severity_counts.Bajo }}</strong></article>
     </div>
     <p class="recommendation">{{ general_recommendation }}</p>
   </section>
 
   <section>
-    <h2>Graficos Ejecutivos</h2>
+    <h2>Executive Charts</h2>
     <div class="chart-grid">
       {% for chart in charts %}
       <article class="chart-card">
@@ -83,40 +65,16 @@
   </section>
 
   <section>
-    <h2>Detalle Tecnico</h2>
+    <h2>Technical Detail</h2>
     <div class="detail-grid">
-      <article>
-        <h3>URL objetivo</h3>
-        <p>{{ scan.target_url }}</p>
-      </article>
-      <article>
-        <h3>Headers inseguros</h3>
-        <p>{{ findings.missing_headers|length }} hallazgos</p>
-      </article>
-      <article>
-        <h3>Tecnologias detectadas</h3>
-        <p>{{ findings.technologies|length }} tecnologias</p>
-      </article>
-      <article>
-        <h3>Directorios expuestos</h3>
-        <p>{{ findings.exposed_directories|length }} rutas</p>
-      </article>
-      <article>
-        <h3>TLS/SSL</h3>
-        <p>{{ tls_state }}</p>
-      </article>
-      <article>
-        <h3>WAF detectado</h3>
-        <p>{{ waf_state }}</p>
-      </article>
-      <article>
-        <h3>API Security</h3>
-        <p>{{ api_security_state }}</p>
-      </article>
-      <article>
-        <h3>Secret Scanner</h3>
-        <p>{{ secret_state }}</p>
-      </article>
+      <article><h3>Target URL</h3><p>{{ scan.target_url }}</p></article>
+      <article><h3>Insecure headers</h3><p>{{ findings.missing_headers|length }} findings</p></article>
+      <article><h3>Detected technologies</h3><p>{{ findings.technologies|length }} technologies</p></article>
+      <article><h3>Exposed directories</h3><p>{{ findings.exposed_directories|length }} paths</p></article>
+      <article><h3>TLS/SSL</h3><p>{{ tls_state }}</p></article>
+      <article><h3>Detected WAF</h3><p>{{ waf_state }}</p></article>
+      <article><h3>API Security</h3><p>{{ api_security_state }}</p></article>
+      <article><h3>Secret Scanner</h3><p>{{ secret_state }}</p></article>
     </div>
   </section>
 
@@ -126,40 +84,40 @@
     <article class="cve-card">
       <h3>{{ cve.cve_id or cve.cve }}</h3>
       <div class="cve-grid">
-        <span>Severidad: <strong>{{ cve.severity }}</strong></span>
+        <span>Severity: <strong>{{ cve.severity }}</strong></span>
         <span>CVSS: <strong>{{ cve.cvss if cve.cvss is not none else "-" }}</strong></span>
         <span>CWE: <strong>{{ cve.cwe or "-" }}</strong></span>
-        <span>Producto: <strong>{{ cve.product or "-" }}</strong></span>
-        <span>Version afectada: <strong>{{ cve.affected_version or cve.matched_version or "-" }}</strong></span>
+        <span>Product: <strong>{{ cve.product or "-" }}</strong></span>
+        <span>Affected version: <strong>{{ cve.affected_version or cve.matched_version or "-" }}</strong></span>
       </div>
-      <p><strong>Descripcion:</strong> {{ cve.description or "-" }}</p>
-      <p><strong>Impacto:</strong> {{ cve.impact or "-" }}</p>
-      <p><strong>Recomendacion:</strong> {{ cve.recommendation or "-" }}</p>
-      <p><strong>Referencias:</strong> {{ (cve.references or [])|join(", ") or "Sin referencias locales." }}</p>
+      <p><strong>Description:</strong> {{ cve.description or "-" }}</p>
+      <p><strong>Impact:</strong> {{ cve.impact or "-" }}</p>
+      <p><strong>Recommendation:</strong> {{ cve.recommendation or "-" }}</p>
+      <p><strong>References:</strong> {{ (cve.references or [])|join(", ") or "No local references." }}</p>
     </article>
     {% else %}
-    <p>Sin CVE locales encontradas.</p>
+    <p>No local CVEs found.</p>
     {% endfor %}
   </section>
 
   <section>
     <h2>OWASP Top 10</h2>
     <table>
-      <thead><tr><th>Categoria</th><th>Hallazgo relacionado</th><th>Riesgo</th><th>Recomendacion</th></tr></thead>
+      <thead><tr><th>Category</th><th>Related finding</th><th>Risk</th><th>Recommendation</th></tr></thead>
       <tbody>
         {% for item in findings.owasp %}
         <tr><td>{{ item.category }}</td><td>{{ item.finding }}</td><td>{{ item.severity }}</td><td>{{ item.recommendation }}</td></tr>
         {% else %}
-        <tr><td colspan="4">Sin clasificaciones OWASP para este escaneo.</td></tr>
+        <tr><td colspan="4">No OWASP classifications for this scan.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </section>
 
   <section>
-    <h2>Plan de Remediacion</h2>
+    <h2>Remediation Plan</h2>
     <table>
-      <thead><tr><th>Prioridad</th><th>Hallazgo</th><th>Accion recomendada</th><th>Responsable sugerido</th><th>Tiempo estimado</th></tr></thead>
+      <thead><tr><th>Priority</th><th>Finding</th><th>Recommended action</th><th>Suggested owner</th><th>Estimated time</th></tr></thead>
       <tbody>
         {% for item in remediation_plan %}
         <tr><td>{{ item.priority }}</td><td>{{ item.finding }}</td><td>{{ item.action }}</td><td>{{ item.owner }}</td><td>{{ item.eta }}</td></tr>
@@ -169,10 +127,10 @@
   </section>
 
   <section>
-    <h2>Conclusion Ejecutiva</h2>
+    <h2>Executive Conclusion</h2>
     <p>{{ executive_conclusion }}</p>
-    <p><strong>Riesgo residual:</strong> {{ residual_risk }}</p>
-    <p><strong>Proximos pasos:</strong> priorizar remediaciones criticas, validar cambios y ejecutar un nuevo escaneo de control.</p>
+    <p><strong>Residual risk:</strong> {{ residual_risk }}</p>
+    <p><strong>Next steps:</strong> prioritize critical remediation, validate changes and run a control scan.</p>
   </section>
 </body>
 </html>

@@ -172,16 +172,16 @@ def test_admin_can_login_and_view_dashboard(client):
     response = login(client)
 
     assert response.status_code == 200
-    assert b"Panel de control" in response.data
-    assert b"Nuevo escaneo" in response.data
-    assert b"Reportes" in response.data
-    assert b"Monitor de disponibilidad" in response.data
-    assert b"Monitor de infraestructura" in response.data
-    assert b"Activos" in response.data
-    assert b"Indicadores de compromiso" in response.data
-    assert b"Inteligencia de amenazas / VirusTotal" in response.data
+    assert b"Dashboard" in response.data
+    assert b"New scan" in response.data
+    assert b"Reports" in response.data
+    assert b"Uptime Monitor" in response.data
+    assert b"Infrastructure Monitor" in response.data
+    assert b"Assets" in response.data
+    assert b"IOC Center" in response.data
+    assert b"Threat Intelligence / VirusTotal" in response.data
     assert b"OWASP Top 10" in response.data
-    assert b"Configuracion" in response.data
+    assert b"Settings" in response.data
 
 
 def test_user_can_switch_language_to_english(client, app):
@@ -254,7 +254,7 @@ def test_dns_domain_lookup_page_returns_records(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert b"DNS / Dominios" in response.data
+    assert b"DNS / Domains" in response.data
     assert b"93.184.216.34" in response.data
     assert b"mail.example.com" in response.data
 
@@ -408,7 +408,7 @@ def test_dashboard_shows_soc_summary_charts_and_actions(client, monkeypatch):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert b"Centro de Operaciones VigiScan" in response.data
+    assert b"VigiScan Operations Center" in response.data
     assert b"Total Assets" in response.data
     assert b"Total IOCs" in response.data
     assert b"VirusTotal Enabled" in response.data
@@ -421,9 +421,13 @@ def test_dashboard_shows_soc_summary_charts_and_actions(client, monkeypatch):
     assert b"Riesgo alto" in response.data
     assert b"severityChart" in response.data
     assert b"technologyChart" in response.data
-    assert b"Ver detalle" in response.data
+    assert b"owaspFocusChart" in response.data
+    assert b"cveFocusChart" in response.data
+    assert b"riskFocusChart" in response.data
+    assert b"View" in response.data
     assert b"HTML" in response.data
     assert b"JSON" in response.data
+    assert b"PDF" in response.data
     assert b"Eliminar" in response.data
     assert b"Filtrar por OWASP" in response.data
     assert b"A02" in response.data
@@ -434,8 +438,8 @@ def test_reports_show_detailed_cve_metadata(client, monkeypatch):
     response = client.get("/reports")
 
     assert response.status_code == 200
-    assert b"CVE locales" in response.data
-    assert b"Captura" in response.data
+    assert b"Local CVEs" in response.data
+    assert b"Screenshot" in response.data
     assert b"OWASP" in response.data
     assert b"CVE-2021-41773" in response.data
     assert b"Apache HTTP Server 2.4.49" in response.data
@@ -515,8 +519,8 @@ def test_scan_pdf_route_generates_file_when_backend_available(client, app, monke
     create_completed_scan(client, monkeypatch)
 
     def fake_generate_pdf(html, output_path, *, base_url=None):
-        assert "Informe Ejecutivo de Seguridad Web" in html
-        assert "Desarrollado por Kendry Rosario" in html
+        assert "Executive Web Security Report" in html
+        assert "Developed by Kendry Rosario" in html
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"%PDF-1.4\n%fake\n")

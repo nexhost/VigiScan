@@ -6,12 +6,12 @@
 <section class="hero-panel glass-panel animate-in">
   <div>
     <span class="eyebrow">SOC dashboard</span>
-    <h1>Centro de Operaciones VigiScan</h1>
-    <p>Vista clara de exposicion web, severidad, tecnologias detectadas y actividad reciente.</p>
+    <h1>VigiScan Operations Center</h1>
+    <p>Clear view of web exposure, severity, detected technologies and recent activity.</p>
   </div>
   <div class="hero-actions">
-    <a class="btn btn-cyber" href="{{ url_for('main.domain_dns') }}">DNS / Dominios</a>
-    <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">Nuevo escaneo</a>
+    <a class="btn btn-cyber" href="{{ url_for('main.domain_dns') }}">DNS / Domains</a>
+    <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">New scan</a>
   </div>
 </section>
 
@@ -28,63 +28,63 @@
   <div class="executive-card-grid">
     <article class="executive-card accent-blue" data-tooltip="Postura defensiva agregada">
       <small>Month to date</small>
-      <span>{{ t("security_score") }}</span>
+      <span>Security score</span>
       <strong data-count="{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}">{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}</strong>
       <canvas class="sparkline" data-values="62,68,66,74,71,79,76,82"></canvas>
       <em>+ 6.1%</em>
     </article>
     <article class="executive-card accent-green" data-tooltip="Escaneos acumulados">
       <small>Month to date</small>
-      <span>Total de escaneos</span>
+      <span>Total scans</span>
       <strong data-count="{{ total_scans }}">{{ total_scans }}</strong>
       <canvas class="sparkline" data-values="{{ scans_by_day_chart['values']|join(',') }}"></canvas>
       <em>+ 5.1%</em>
     </article>
     <article class="executive-card accent-red" data-tooltip="Hallazgos criticos">
       <small>Month to date</small>
-      <span>Hallazgos criticos</span>
+      <span>Critical findings</span>
       <strong data-count="{{ dashboard_stats.critical_findings }}">{{ dashboard_stats.critical_findings }}</strong>
       <canvas class="sparkline" data-values="1,0,1,2,1,3,2,4"></canvas>
       <em class="danger">+ 2%</em>
     </article>
     <article class="executive-card accent-orange" data-tooltip="Hallazgos de severidad alta">
       <small>Month to date</small>
-      <span>Hallazgos altos</span>
+      <span>High findings</span>
       <strong data-count="{{ dashboard_stats.high_findings }}">{{ dashboard_stats.high_findings }}</strong>
       <canvas class="sparkline" data-values="4,5,5,6,4,7,6,8"></canvas>
       <em class="danger">+ 3.4%</em>
     </article>
     <article class="executive-card accent-cyan" data-tooltip="Assets inventariados">
       <small>Month to date</small>
-      <span>Activos monitoreados</span>
+      <span>Monitored assets</span>
       <strong data-count="{{ overview_stats.total_assets }}">{{ overview_stats.total_assets }}</strong>
       <canvas class="sparkline" data-values="2,3,3,5,6,6,7,8"></canvas>
       <em>+ 12%</em>
     </article>
     <article class="executive-card accent-green" data-tooltip="Disponibilidad promedio">
       <small>Month to date</small>
-      <span>Disponibilidad global</span>
+      <span>Global uptime</span>
       <strong>{{ platform_stats.average_uptime }}%</strong>
       <canvas class="sparkline" data-values="92,95,97,94,98,99,98,99"></canvas>
       <em>+ 2%</em>
     </article>
     <article class="executive-card accent-purple" data-tooltip="Coincidencias CVE">
       <small>Month to date</small>
-      <span>CVE detectadas</span>
+      <span>Detected CVEs</span>
       <strong data-count="{{ dashboard_stats.cve_detected }}">{{ dashboard_stats.cve_detected }}</strong>
       <canvas class="sparkline" data-values="0,1,1,2,2,3,4,4"></canvas>
       <em class="danger">+ 3.4%</em>
     </article>
     <article class="executive-card accent-blue" data-tooltip="Resultados en cache de Threat Intelligence">
       <small>Month to date</small>
-      <span>Alertas VirusTotal</span>
+      <span>VirusTotal alerts</span>
       <strong data-count="{{ vt_summary.cached_results }}">{{ vt_summary.cached_results }}</strong>
       <canvas class="sparkline" data-values="1,1,2,2,3,3,4,5"></canvas>
       <em>+ 2%</em>
     </article>
     <article class="executive-card accent-cyan" data-tooltip="Dominios disponibles para consulta DNS">
       <small>Inventory</small>
-      <span>DNS / Dominios</span>
+      <span>DNS / Domains</span>
       <strong data-count="{{ dns_summary.domains }}">{{ dns_summary.domains }}</strong>
       <canvas class="sparkline" data-values="1,2,2,3,3,4,4,5"></canvas>
       <em>Lookup</em>
@@ -95,19 +95,49 @@
 <section class="scan-command glass-panel animate-in delay-1">
   <div>
     <span class="eyebrow">Quick scan</span>
-    <h2>Investigar URL</h2>
-    <p>Ejecuta una evaluacion defensiva sobre un objetivo autorizado.</p>
+    <h2>Investigate URL</h2>
+    <p>Run a defensive assessment against an authorized target.</p>
   </div>
   <form class="scan-launch-form" method="post" action="{{ url_for('main.scan_new') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input class="form-control cyber-input scan-url-input" name="target_url" type="url" placeholder="https://example.com" required>
-    <button class="btn btn-glow" type="submit">Escanear ahora</button>
+    <button class="btn btn-glow" type="submit">Scan now</button>
   </form>
 </section>
 
 <section class="dashboard-section-title animate-in">
   <span class="eyebrow">Vulnerability overview</span>
-  <h2>OWASP Top 10 distribution, CVE severity trend y actividad de riesgo</h2>
+  <h2>OWASP Top 10 distribution, CVE severity trend and risk activity</h2>
+</section>
+
+<section class="dashboard-chart-card-grid mb-4">
+  <article class="glass-panel chart-focus-card animate-in">
+    <div class="panel-heading">
+      <span>OWASP Top 10 Distribution</span>
+      <small>Category mapping</small>
+    </div>
+    <div class="chart-panel">
+      <canvas id="owaspFocusChart" aria-label="OWASP Top 10 distribution"></canvas>
+    </div>
+  </article>
+  <article class="glass-panel chart-focus-card animate-in delay-1">
+    <div class="panel-heading">
+      <span>CVE Severity Trend</span>
+      <small>Local DB</small>
+    </div>
+    <div class="chart-panel">
+      <canvas id="cveFocusChart" aria-label="CVE severity trend"></canvas>
+    </div>
+  </article>
+  <article class="glass-panel chart-focus-card animate-in delay-2">
+    <div class="panel-heading">
+      <span>Risk Activity</span>
+      <small>Last 7 days</small>
+    </div>
+    <div class="chart-panel">
+      <canvas id="riskFocusChart" aria-label="High risk activity"></canvas>
+    </div>
+  </article>
 </section>
 
 <section class="metric-grid">
@@ -504,9 +534,10 @@
           <td>{{ scan.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
           <td>
             <div class="action-row">
-              <a class="btn btn-sm btn-cyber" href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">Ver detalle</a>
+              <a class="btn btn-sm btn-cyber" href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">View</a>
               <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_html', scan_id=scan.id) }}">HTML</a>
               <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_json', scan_id=scan.id) }}">JSON</a>
+              <a class="btn btn-sm btn-glow pdf-download-btn" href="{{ url_for('main.scan_download_pdf', scan_id=scan.id) }}" data-loading-text="{{ t('generating') }}">PDF</a>
               <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_csv', scan_id=scan.id) }}">CSV</a>
               <form method="post" action="{{ url_for('main.scan_delete', scan_id=scan.id) }}" onsubmit="return confirm('Eliminar este escaneo?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -607,6 +638,9 @@
   barChart("owaspChart", owaspData, "Categorias", "rgba(37, 99, 235, 0.68)");
   barChart("cveSeverityChart", cveSeverityData, "CVE", "rgba(245, 158, 11, 0.72)");
   lineChart("highRiskTrendChart", highRiskTrendData, "Riesgos altos", "#ef4444");
+  barChart("owaspFocusChart", owaspData, "OWASP", "rgba(25, 197, 194, 0.78)");
+  barChart("cveFocusChart", cveSeverityData, "CVE", "rgba(245, 158, 11, 0.76)");
+  lineChart("riskFocusChart", highRiskTrendData, "High risk", "#dc2626");
 
   new Chart(document.getElementById("technologyChart"), {
     type: "bar",

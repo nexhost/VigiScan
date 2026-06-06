@@ -25,7 +25,7 @@ class User(UserMixin, db.Model):
     display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     language_preference: Mapped[str] = mapped_column(
         String(8),
-        default="es",
+        default="en",
         nullable=False,
     )
     virustotal_api_key_encrypted: Mapped[str | None] = mapped_column(

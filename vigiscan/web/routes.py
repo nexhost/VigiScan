@@ -978,11 +978,11 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
     severity_counts = pdf_severity_counts(findings)
     charts = [
         {
-            "title": "Hallazgos por severidad",
+            "title": "Findings by severity",
             "items": chart_items_from_counts(severity_counts),
         },
         {
-            "title": "Distribucion OWASP Top 10",
+            "title": "OWASP Top 10 distribution",
             "items": chart_items_from_counts(
                 _count_values(
                     item.get("category_id") or item.get("category") or "OWASP"
@@ -991,19 +991,19 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
             ),
         },
         {
-            "title": "CVE por severidad",
+            "title": "CVE by severity",
             "items": chart_items_from_counts(
                 _count_values(str(cve.get("severity") or "Unknown") for cve in findings["cves"])
             ),
         },
         {
-            "title": "Tecnologias detectadas",
+            "title": "Detected technologies",
             "items": chart_items_from_counts(
                 _count_values(str(tech.get("name") or "Unknown") for tech in findings["technologies"])
             ),
         },
         {
-            "title": "Score de riesgo",
+            "title": "Risk score",
             "items": [
                 {
                     "label": scan.risk_level or report_data["risk"]["level"],
@@ -1013,7 +1013,7 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
             ],
         },
         {
-            "title": "Estado SSL",
+            "title": "SSL status",
             "items": chart_items_from_counts(_count_values([pdf_module_state(scan, "tls_analyzer")])),
         },
     ]
@@ -1022,7 +1022,7 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
         "scan": scan,
         "report": report_data,
         "findings": findings,
-        "organization": settings_record.organization_name or "Organizacion no configurada",
+        "organization": settings_record.organization_name or "Organization not configured",
         "country": settings_record.country,
         "timezone": settings_record.timezone,
         "generated_local": local_datetime(datetime.now(UTC)),
@@ -1069,7 +1069,7 @@ def chart_items_from_counts(counts: dict[str, int]) -> list[dict[str, Any]]:
         if value
     ]
     if not visible:
-        visible = [{"label": "Sin datos", "value": 0}]
+        visible = [{"label": "No data", "value": 0}]
     max_value = max((item["value"] for item in visible), default=1) or 1
     return [
         {
@@ -1094,12 +1094,12 @@ def pdf_module_state(scan: Scan, module_name: str) -> str:
     modules = report_data.get("modules") if isinstance(report_data, dict) else None
     module = modules.get(module_name) if isinstance(modules, dict) else None
     if not isinstance(module, dict):
-        return "Sin datos"
+        return "No data"
     if module.get("error"):
-        return "Requiere revision"
+        return "Requires review"
     if module.get("detections") or module.get("findings") or module.get("alerts"):
-        return "Hallazgos registrados"
-    return "Sin hallazgos relevantes"
+        return "Findings recorded"
+    return "No relevant findings"
 
 
 def pdf_general_recommendation(scan: Scan, severity_counts: dict[str, int]) -> str:
@@ -1109,19 +1109,19 @@ def pdf_general_recommendation(scan: Scan, severity_counts: dict[str, int]) -> s
         + severity_counts.get("Alto", 0)
     )
     if high_total or scan.risk_level == "Alto":
-        return "Priorizar remediaciones criticas y altas antes de cambios funcionales no urgentes."
+        return "Prioritize critical and high remediation before non-urgent functional changes."
     if scan.risk_level == "Medio":
-        return "Planificar remediacion en el siguiente ciclo operativo y validar controles preventivos."
-    return "Mantener monitoreo continuo, parches al dia y revalidacion periodica."
+        return "Plan remediation in the next operational cycle and validate preventive controls."
+    return "Maintain continuous monitoring, current patching and periodic revalidation."
 
 
 def pdf_executive_conclusion(scan: Scan) -> str:
     score = scan.score if scan.score is not None else 0
     if scan.risk_level == "Alto" or score >= 70:
-        return "El objetivo presenta exposicion relevante y requiere remediacion prioritaria con validacion posterior."
+        return "The target shows relevant exposure and requires priority remediation with follow-up validation."
     if scan.risk_level == "Medio" or score >= 35:
-        return "El objetivo presenta riesgos gestionables que deben tratarse dentro del ciclo de mejora continua."
-    return "El objetivo no presenta exposicion alta en los controles evaluados, manteniendo monitoreo preventivo."
+        return "The target shows manageable risks that should be handled within the continuous improvement cycle."
+    return "The target does not show high exposure in the evaluated controls; continue preventive monitoring."
 
 
 def pdf_remediation_plan(findings: dict[str, list[dict[str, Any]]]) -> list[dict[str, str]]:
@@ -1131,29 +1131,29 @@ def pdf_remediation_plan(findings: dict[str, list[dict[str, Any]]]) -> list[dict
             {
                 "priority": str(cve.get("severity") or "Alta"),
                 "finding": str(cve.get("cve_id") or cve.get("cve") or "CVE"),
-                "action": str(cve.get("recommendation") or "Actualizar componente afectado."),
+                "action": str(cve.get("recommendation") or "Update the affected component."),
                 "owner": "AppSec / DevOps",
-                "eta": "7-15 dias",
+                "eta": "7-15 days",
             }
         )
     for header in findings["missing_headers"][:4]:
         rows.append(
             {
-                "priority": str(header.get("severity") or "Media"),
-                "finding": f"Header {header.get('header', 'seguridad')}",
-                "action": "Aplicar header recomendado y validar comportamiento.",
+                "priority": str(header.get("severity") or "Medium"),
+                "finding": f"Header {header.get('header', 'security')}",
+                "action": "Apply the recommended header and validate browser behavior.",
                 "owner": "Web Platform",
-                "eta": "3-7 dias",
+                "eta": "3-7 days",
             }
         )
     if not rows:
         rows.append(
             {
-                "priority": "Baja",
-                "finding": "Sin hallazgos criticos",
-                "action": "Mantener monitoreo y ejecutar revalidacion periodica.",
+                "priority": "Low",
+                "finding": "No critical findings",
+                "action": "Maintain monitoring and run periodic revalidation.",
                 "owner": "SOC",
-                "eta": "Continuo",
+                "eta": "Continuous",
             }
         )
     return rows[:8]

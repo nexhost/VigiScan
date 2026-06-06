@@ -2095,9 +2095,9 @@ body.cyber-body .digital-globe {
 }
 
 body.cyber-body .glass-alert {
-  background: rgba(8, 44, 54, 0.95);
-  border-color: var(--line);
-  color: var(--text);
+  background: #ffffff;
+  border-color: #d7e3f4;
+  color: #101828;
 }
 
 .uptime-dark-body {
@@ -3180,11 +3180,13 @@ body.cyber-body .sidebar-nav a {
   border: 0;
   border-radius: 7px;
   color: #333b48;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   gap: 12px;
+  letter-spacing: 0.02em;
   min-height: 42px;
   padding: 9px 11px;
+  text-transform: uppercase;
 }
 
 body.cyber-body .sidebar-nav a:hover,
@@ -3294,6 +3296,12 @@ body.cyber-body .login-card {
   border: 1px solid #edf1f5;
   border-radius: 7px;
   box-shadow: 0 8px 22px rgba(16, 24, 40, 0.06);
+}
+
+body.cyber-body .glass-alert {
+  background: #ffffff;
+  border: 1px solid #d7e3f4;
+  color: #101828;
 }
 
 body.cyber-body .glass-panel::before,
@@ -3432,6 +3440,120 @@ body.cyber-body .cve-card {
   border-color: #d7e3f4;
 }
 
+body.cyber-body .owasp-summary-card,
+body.cyber-body .owasp-card {
+  background: #ffffff;
+  border: 1px solid #e5ebf2;
+  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.06);
+  color: #101828;
+}
+
+body.cyber-body .owasp-card::before {
+  display: none;
+}
+
+body.cyber-body .owasp-card p,
+body.cyber-body .owasp-card li,
+body.cyber-body .owasp-relation,
+body.cyber-body .owasp-recommendation {
+  color: #475569;
+}
+
+body.cyber-body .owasp-relation,
+body.cyber-body .owasp-recommendation {
+  background: #f8fbfd;
+  border-color: #d7e3f4;
+}
+
+body.cyber-body .owasp-recommendation {
+  background: #f0fdfd;
+  border-left-color: #19c5c2;
+}
+
+.dashboard-chart-card-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.chart-focus-card {
+  min-height: 340px;
+}
+
+.reports-action-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(108px, 1fr));
+  justify-content: end;
+  min-width: 250px;
+}
+
+.reports-action-grid .btn {
+  justify-content: center;
+  min-height: 32px;
+  white-space: nowrap;
+}
+
+body.cyber-body .action-row {
+  align-items: center;
+  gap: 8px;
+}
+
+.uptime-systems-toolbar {
+  background: #ffffff;
+  border: 1px solid #edf1f5;
+  border-radius: 7px;
+  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.06);
+  padding: 16px 18px;
+}
+
+.uptime-toolbar-title small,
+.uptime-toolbar-title strong {
+  display: block;
+}
+
+.uptime-toolbar-title small {
+  color: #7b8492;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.uptime-toolbar-title strong {
+  color: #101828;
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+
+.uptime-url-cell {
+  max-width: 380px;
+  min-width: 260px;
+  white-space: normal;
+  word-break: normal;
+}
+
+.uptime-url-cell a {
+  display: inline-block;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+body.cyber-body .uptime-table {
+  min-width: 1380px;
+}
+
+body.cyber-body .uptime-table th,
+body.cyber-body .uptime-table td {
+  padding: 14px 18px;
+}
+
+.dns-whois-card {
+  background: #f8fbfd;
+  border: 1px solid #e5ebf2;
+  border-radius: 7px;
+  padding: 14px;
+}
+
 .dns-result-head {
   align-items: center;
   border-bottom: 1px solid #edf1f5;
@@ -3480,6 +3602,10 @@ body.cyber-body .cve-card {
 @media (max-width: 1199.98px) {
   body.cyber-body .executive-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-chart-card-grid {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import ipaddress
+import json
 import socket
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 from urllib.parse import urlparse
 
 
@@ -24,6 +27,7 @@ class DomainLookupResult:
     ip_addresses: list[str]
     message: str
     resolver: str
+    whois: dict[str, str | list[str]] = field(default_factory=dict)
 
 
 def normalize_lookup_target(value: str) -> str:
@@ -48,6 +52,7 @@ def lookup_domain(value: str, timeout: float = 3.0) -> DomainLookupResult:
             reverse_dns=[],
             canonical_name=None,
             ip_addresses=[],
+            whois={},
             message="Ingresa un dominio, URL o IP valida.",
             resolver="stdlib",
         )
@@ -82,6 +87,7 @@ def lookup_domain(value: str, timeout: float = 3.0) -> DomainLookupResult:
             reverse_dns=reverse_dns,
             canonical_name=canonical_name,
             ip_addresses=[hostname],
+            whois=query_rdap(hostname, is_ip=True),
             message="Consulta completada.",
             resolver=resolver_name,
         )
@@ -130,9 +136,47 @@ def lookup_domain(value: str, timeout: float = 3.0) -> DomainLookupResult:
         reverse_dns=reverse_dns,
         canonical_name=canonical_name,
         ip_addresses=ip_addresses,
+        whois=query_rdap(hostname, is_ip=False),
         message="Consulta completada." if ip_addresses or any(records.values()) else "No se encontraron registros DNS.",
         resolver=resolver_name,
     )
+
+
+def query_rdap(hostname: str, *, is_ip: bool, timeout: float = 4.0) -> dict[str, str | list[str]]:
+    """Fetch lightweight WHOIS-like RDAP data for a domain or IP."""
+    kind = "ip" if is_ip else "domain"
+    url = f"https://rdap.org/{kind}/{hostname}"
+    request = Request(url, headers={"User-Agent": "VigiScan/0.1 defensive lookup"})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    except (OSError, URLError, TimeoutError, json.JSONDecodeError):
+        return {"status": "No WHOIS/RDAP data available"}
+
+    events = [
+        f"{event.get('eventAction')}: {event.get('eventDate')}"
+        for event in payload.get("events", [])
+        if isinstance(event, dict) and event.get("eventAction") and event.get("eventDate")
+    ]
+    nameservers = [
+        item.get("ldhName") or item.get("unicodeName")
+        for item in payload.get("nameservers", [])
+        if isinstance(item, dict) and (item.get("ldhName") or item.get("unicodeName"))
+    ]
+    notices = [
+        notice.get("title")
+        for notice in payload.get("notices", [])
+        if isinstance(notice, dict) and notice.get("title")
+    ]
+    return {
+        "status": "RDAP data found",
+        "handle": str(payload.get("handle") or "-"),
+        "name": str(payload.get("name") or payload.get("ldhName") or hostname),
+        "registry": str(payload.get("port43") or "-"),
+        "events": events[:6],
+        "nameservers": sorted(set(str(item) for item in nameservers))[:8],
+        "notices": notices[:4],
+    }
 
 
 def _stdlib_addresses(hostname: str, family: socket.AddressFamily) -> list[str]:

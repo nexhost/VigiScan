@@ -6,7 +6,7 @@ from flask import session
 from flask_login import current_user
 
 SUPPORTED_LANGUAGES = {"es", "en"}
-DEFAULT_LANGUAGE = "es"
+DEFAULT_LANGUAGE = "en"
 
 TRANSLATIONS: dict[str, dict[str, str]] = {
     "es": {

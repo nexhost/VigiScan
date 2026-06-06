@@ -72,8 +72,8 @@
     <a class="btn btn-sm uptime-add-btn" href="{{ url_for('main.infrastructure') }}">Ver infraestructura</a>
   </section>
 
-  <div class="uptime-toolbar">
-    <div><small>ALL</small><strong>Systems</strong></div>
+  <div class="uptime-toolbar uptime-systems-toolbar">
+    <div class="uptime-toolbar-title"><small>ALL</small><strong>Systems</strong></div>
     <div class="uptime-toolbar-actions">
       <button class="btn uptime-add-btn" type="button" data-bs-toggle="collapse" data-bs-target="#newUptimeSite" aria-expanded="false" aria-controls="newUptimeSite">Add monitor</button>
       <label class="uptime-switch"><input id="cardModeToggle" type="checkbox"><span></span>Card Mode</label>
@@ -123,7 +123,7 @@
           {% set last = row.last %}
           <tr>
             <td><div class="uptime-website"><span class="site-favicon">{{ site.name[:1].upper() }}</span><div><strong>{{ site.name }}</strong><small>{{ site.responsible or "Sin responsable" }}</small></div></div></td>
-            <td class="text-break"><small>{{ site.url }}</small></td>
+            <td class="uptime-url-cell"><a class="link-cyber" href="{{ site.url }}" target="_blank" rel="noopener noreferrer">{{ site.url }}</a></td>
             <td>
               {% if not site.active %}<span class="uptime-pill pill-muted">PAUSED</span>
               {% elif last and last.up %}<span class="uptime-pill pill-valid">UP</span>

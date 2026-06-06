@@ -1,30 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}DNS / Dominios - VigiScan{% endblock %}
+{% block title %}DNS / Domains - VigiScan{% endblock %}
 
 {% block content %}
 <section class="hero-panel glass-panel animate-in">
   <div>
     <span class="eyebrow">Domain intelligence</span>
-    <h1>DNS / Dominios</h1>
-    <p>Consulta defensiva de dominios, URLs e IPs para validar resolucion, registros publicos y cobertura del inventario.</p>
+    <h1>DNS / Domains</h1>
+    <p>Defensive lookup for domains, URLs and IP addresses with DNS records plus WHOIS/RDAP ownership context.</p>
   </div>
   <div class="hero-actions">
-    <a class="btn btn-cyber" href="{{ url_for('main.assets') }}">Activos</a>
+    <a class="btn btn-cyber" href="{{ url_for('main.assets') }}">Assets</a>
     <a class="btn btn-ghost" href="{{ url_for('main.virustotal') }}">VirusTotal</a>
   </div>
 </section>
 
 <section class="metric-grid infra-metric-grid">
   <article class="metric-card saas-card animate-in">
-    <div class="metric-label">Dominios conocidos</div>
+    <div class="metric-label">Known domains</div>
     <div class="metric-value">{{ summary.domains }}</div>
-    <div class="metric-caption">Activos y uptime</div>
+    <div class="metric-caption">Assets and uptime</div>
   </article>
   <article class="metric-card saas-card animate-in delay-1">
-    <div class="metric-label">Assets con dominio</div>
+    <div class="metric-label">Assets with domain</div>
     <div class="metric-value">{{ summary.assets_with_domain }}</div>
-    <div class="metric-caption">Inventario enriquecido</div>
+    <div class="metric-caption">Enriched inventory</div>
   </article>
   <article class="metric-card saas-card animate-in delay-2">
     <div class="metric-label">Uptime domains</div>
@@ -32,9 +32,9 @@
     <div class="metric-caption">Aplicaciones monitoreadas</div>
   </article>
   <article class="metric-card saas-card animate-in delay-3">
-    <div class="metric-label">Primer dominio</div>
+    <div class="metric-label">First domain</div>
     <div class="metric-date text-break">{{ summary.latest_domain }}</div>
-    <div class="metric-caption">Referencia rapida</div>
+    <div class="metric-caption">Quick reference</div>
   </article>
 </section>
 
@@ -42,7 +42,7 @@
   <div class="col-lg-4">
     <div class="glass-panel h-100 animate-in delay-1">
       <div class="panel-heading">
-        <span>Consulta DNS</span>
+        <span>DNS lookup</span>
         <small>A / AAAA / MX / NS / TXT</small>
       </div>
       <form method="post" novalidate>
@@ -54,18 +54,18 @@
           <div class="invalid-feedback d-block">{{ error }}</div>
           {% endfor %}
         </div>
-        {{ form.submit_lookup(class="btn btn-glow w-100") }}
+        {{ form.submit_lookup(class="btn btn-glow w-100", value="Run DNS lookup") }}
       </form>
       <div class="audit-note mt-3">
-        Si dnspython esta instalado, se consultan registros avanzados. Sin ese extra, VigiScan usa resolucion local A/AAAA.
+        When dnspython is installed, VigiScan queries advanced DNS records. Without it, local A/AAAA resolution still works.
       </div>
     </div>
   </div>
   <div class="col-lg-8">
     <div class="glass-panel h-100 animate-in delay-2">
       <div class="panel-heading">
-        <span>Resultado</span>
-        <small>{{ result.resolver if result else "Sin consulta" }}</small>
+        <span>Result</span>
+        <small>{{ result.resolver if result else "No lookup yet" }}</small>
       </div>
       {% if result %}
         {% if not result.ok %}
@@ -73,16 +73,35 @@
         {% else %}
         <div class="dns-result-head">
           <div>
-            <span class="eyebrow">Objetivo normalizado</span>
+            <span class="eyebrow">Normalized target</span>
             <h2 class="text-break">{{ result.hostname }}</h2>
           </div>
           <span class="status-pill status-up">{{ result.message }}</span>
         </div>
         <div class="vt-facts mb-3">
-          <div><span>Canonico</span><strong class="text-break">{{ result.canonical_name or "-" }}</strong></div>
+          <div><span>Canonical</span><strong class="text-break">{{ result.canonical_name or "-" }}</strong></div>
           <div><span>IPs</span><strong>{{ result.ip_addresses|length }}</strong></div>
           <div><span>PTR</span><strong>{{ result.reverse_dns|join(", ") if result.reverse_dns else "-" }}</strong></div>
           <div><span>Resolver</span><strong>{{ result.resolver }}</strong></div>
+        </div>
+        <div class="dns-whois-card mb-3">
+          <div class="panel-heading">
+            <span>WHOIS / RDAP</span>
+            <small>{{ result.whois.status or "No data" }}</small>
+          </div>
+          <div class="vt-facts">
+            <div><span>Handle</span><strong class="text-break">{{ result.whois.handle or "-" }}</strong></div>
+            <div><span>Name</span><strong class="text-break">{{ result.whois.name or "-" }}</strong></div>
+            <div><span>Registry</span><strong class="text-break">{{ result.whois.registry or "-" }}</strong></div>
+            <div><span>Nameservers</span><strong>{{ result.whois.nameservers|join(", ") if result.whois.nameservers else "-" }}</strong></div>
+          </div>
+          {% if result.whois.events %}
+          <ul class="dns-record-list mt-3">
+            {% for event in result.whois.events %}
+            <li class="text-break">{{ event }}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
         </div>
         <div class="dns-record-grid">
           {% for record_type, values in result.records.items() %}
@@ -98,14 +117,14 @@
               {% endfor %}
             </ul>
             {% else %}
-            <div class="text-secondary">Sin registros.</div>
+            <div class="text-secondary">No records.</div>
             {% endif %}
           </article>
           {% endfor %}
         </div>
         {% endif %}
       {% else %}
-      <div class="screenshot-unavailable">Ejecuta una consulta para ver registros DNS del dominio.</div>
+      <div class="screenshot-unavailable">Run a lookup to view DNS and WHOIS/RDAP details.</div>
       {% endif %}
     </div>
   </div>

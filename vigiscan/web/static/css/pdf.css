@@ -16,7 +16,7 @@
 body {
   background: #f4f7fa;
   color: #0f172a;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   font-size: 12px;
   line-height: 1.5;
   margin: 0;
@@ -28,7 +28,7 @@ body {
 
 section {
   background: #ffffff;
-  border: 1px solid #d7e3f4;
+  border: 1px solid #e0e8f2;
   border-radius: 8px;
   margin: 0 0 12px;
   padding: 14px;
@@ -36,6 +36,9 @@ section {
 }
 
 .cover {
+  background:
+    linear-gradient(90deg, #19c5c2 0 8px, transparent 8px),
+    linear-gradient(135deg, #ffffff, #f8fbfd);
   min-height: 240mm;
   padding: 26px;
 }
@@ -48,12 +51,17 @@ section {
 }
 
 .logo {
-  height: 72px;
-  width: 180px;
+  background: #ffffff;
+  border: 1px solid #d7f2f2;
+  border-radius: 10px;
+  height: 76px;
+  object-fit: contain;
+  padding: 8px;
+  width: 190px;
 }
 
 .eyebrow {
-  color: #0ea5e9;
+  color: #12b7b4;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0;
@@ -69,7 +77,8 @@ h3 {
 }
 
 h1 {
-  font-size: 28px;
+  font-size: 30px;
+  line-height: 1.12;
 }
 
 h2 {
@@ -105,7 +114,7 @@ p {
 .summary-grid article,
 .detail-grid article {
   background: #f8fbfd;
-  border: 1px solid #d7e3f4;
+  border: 1px solid #e0e8f2;
   border-radius: 8px;
   padding: 12px;
 }
@@ -127,8 +136,8 @@ p {
 }
 
 .risk-hero {
-  background: #f1f7ff;
-  border: 1px solid #d7e3f4;
+  background: linear-gradient(135deg, #effefe, #f1f7ff);
+  border: 1px solid #d7f2f2;
   border-radius: 8px;
   margin-top: 28px;
   padding: 22px;
@@ -142,7 +151,7 @@ p {
 }
 
 .risk-hero strong {
-  color: #0ea5e9;
+  color: #12b7b4;
   display: inline-block;
   font-size: 58px;
   line-height: 1;
@@ -154,14 +163,14 @@ p {
 }
 
 .summary-grid strong {
-  color: #0ea5e9;
+  color: #12b7b4;
   display: block;
   font-size: 24px;
 }
 
 .recommendation {
-  background: #f1f7ff;
-  border-left: 4px solid #0ea5e9;
+  background: #effefe;
+  border-left: 4px solid #19c5c2;
   padding: 10px;
 }
 
@@ -172,6 +181,9 @@ p {
 
 .chart-card {
   background: #f8fbfd;
+  border: 1px solid #e0e8f2;
+  border-radius: 8px;
+  padding: 12px;
 }
 
 .bar-row {
@@ -190,7 +202,7 @@ p {
 }
 
 .bar-row i {
-  background: linear-gradient(90deg, #0ea5e9, #06b6d4);
+  background: linear-gradient(90deg, #19c5c2, #1597e5);
   display: block;
   height: 100%;
 }

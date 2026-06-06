@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="{{ current_language() }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,7 +23,7 @@
         <a class="sidebar-brand" href="{{ url_for('main.dashboard') }}">
           <img class="brand-logo" src="{{ url_for('static', filename='img/favicon.svg') }}" alt="VigiScan">
           <span class="brand-copy">
-            <strong>VigiScan WAF</strong>
+            <strong>VigiScan</strong>
             <small>Security Console</small>
           </span>
         </a>
