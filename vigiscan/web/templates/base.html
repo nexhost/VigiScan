@@ -29,13 +29,13 @@
         </a>
         <a class="{% if request.endpoint == 'main.scan_new' %}active{% endif %}" href="{{ url_for('main.scan_new') }}">
           <span class="nav-icon">S</span>
-          Nuevo escaneo
+          Nuevo Escaneo
         </a>
         <a class="{% if request.endpoint == 'main.reports' %}active{% endif %}" href="{{ url_for('main.reports') }}">
           <span class="nav-icon">R</span>
           Reportes
         </a>
-        <a class="{% if request.endpoint == 'main.assets' %}active{% endif %}" href="{{ url_for('main.assets') }}">
+        <a class="{% if request.endpoint in ['main.assets', 'main.asset_new', 'main.asset_detail', 'main.asset_edit'] %}active{% endif %}" href="{{ url_for('main.assets') }}">
           <span class="nav-icon">A</span>
           Assets
         </a>
@@ -45,11 +45,11 @@
         </a>
         <a class="{% if request.endpoint in ['main.iocs', 'main.ioc_new', 'main.ioc_detail', 'main.ioc_edit'] %}active{% endif %}" href="{{ url_for('main.iocs') }}">
           <span class="nav-icon">I</span>
-          Indicadores de Compromiso
+          IOC Center
         </a>
         <a class="{% if request.endpoint == 'main.virustotal' %}active{% endif %}" href="{{ url_for('main.virustotal') }}">
           <span class="nav-icon">T</span>
-          Threat Intelligence
+          Threat Intelligence / VirusTotal
         </a>
         <a class="{% if request.endpoint == 'main.owasp' %}active{% endif %}" href="{{ url_for('main.owasp') }}">
           <span class="nav-icon">O</span>
@@ -57,7 +57,7 @@
         </a>
         <a class="{% if request.endpoint == 'main.settings' %}active{% endif %}" href="{{ url_for('main.settings') }}">
           <span class="nav-icon">C</span>
-          Configuracion
+          Settings
         </a>
       </nav>
       <div class="sidebar-status">

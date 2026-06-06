@@ -78,6 +78,7 @@ bp = Blueprint("main", __name__)
 
 
 @bp.get("/")
+@bp.get("/dashboard")
 @login_required
 def dashboard():
     selected_owasp = request.args.get("owasp", "").strip()
@@ -93,6 +94,11 @@ def dashboard():
     top_technologies = detected_technology_counts(limit=10)
     dashboard_stats = build_dashboard_stats(all_scans)
     monitored_sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
+    overview_stats = build_security_overview_stats(
+        all_scans,
+        monitored_sites,
+        vt_enabled=bool(current_user.virustotal_enabled),
+    )
     vt_latest = VirusTotalResult.query.order_by(
         VirusTotalResult.queried_at.desc()
     ).first()
@@ -103,6 +109,7 @@ def dashboard():
         risk_counts=risk_counts,
         dashboard_stats=dashboard_stats,
         platform_stats=build_platform_stats(monitored_sites),
+        overview_stats=overview_stats,
         regional_settings=get_system_settings(),
         recent_iocs=Indicator.query.order_by(Indicator.created_at.desc()).limit(5).all(),
         vt_summary={
@@ -159,6 +166,7 @@ def logout():
 
 
 @bp.route("/scans/new", methods=("GET", "POST"))
+@bp.route("/scan/new", methods=("GET", "POST"))
 @login_required
 def scan_new():
     form = ScanForm()
@@ -1251,6 +1259,43 @@ def build_platform_stats(sites: list[MonitoredSite]) -> dict[str, Any]:
     }
 
 
+def build_security_overview_stats(
+    scans: list[Scan],
+    sites: list[MonitoredSite],
+    *,
+    vt_enabled: bool,
+) -> dict[str, Any]:
+    """Build the high-level dashboard cards requested by the web UI."""
+    latest_checks = [site.checks[-1] for site in sites if site.checks]
+    ssl_valid = sum(1 for check in latest_checks if check.ssl_valid)
+    ssl_total = len(latest_checks)
+    cves = [
+        cve
+        for scan in scans
+        for cve in scan_findings(scan)["cves"]
+    ]
+    owasp_findings = [
+        finding
+        for scan in scans
+        for finding in scan_owasp_findings(scan)
+    ]
+    waf_detections = [
+        detection
+        for scan in scans
+        for detection in scan_waf_detections(scan)
+    ]
+    return {
+        "total_assets": Asset.query.count(),
+        "total_iocs": Indicator.query.count(),
+        "virustotal_enabled": vt_enabled,
+        "uptime_sites": len(sites),
+        "waf_detected": len(waf_detections),
+        "ssl_health": f"{ssl_valid}/{ssl_total}" if ssl_total else "0/0",
+        "owasp_findings": len(owasp_findings),
+        "cve_count": len(cves),
+    }
+
+
 def chart_scans_by_day(scans: list[Scan]) -> dict[str, list[Any]]:
     days = [
         (datetime.now(UTC) - timedelta(days=offset)).date()
@@ -1343,6 +1388,18 @@ def scan_alerts(scan: Scan) -> list[dict[str, Any]]:
     if not isinstance(passive, dict):
         return []
     return _dict_items(passive.get("alerts"))
+
+
+def scan_waf_detections(scan: Scan) -> list[dict[str, Any]]:
+    """Return passive WAF detections stored on a scan."""
+    report_data = scan.report_data or {}
+    modules = report_data.get("modules") if isinstance(report_data, dict) else None
+    if not isinstance(modules, dict):
+        return []
+    waf_report = modules.get("waf_detect")
+    if not isinstance(waf_report, dict):
+        return []
+    return _dict_items(waf_report.get("detections"))
 
 
 def _aware_datetime(value: datetime) -> datetime:

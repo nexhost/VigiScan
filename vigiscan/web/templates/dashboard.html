@@ -26,6 +26,46 @@
 </section>
 
 <section class="metric-grid">
+  <div class="metric-card animate-in">
+    <div class="metric-label">Total Assets</div>
+    <div class="metric-value">{{ overview_stats.total_assets }}</div>
+    <div class="metric-caption">Inventario de superficie</div>
+  </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">Total IOCs</div>
+    <div class="metric-value">{{ overview_stats.total_iocs }}</div>
+    <div class="metric-caption">Indicadores registrados</div>
+  </div>
+  <div class="metric-card animate-in delay-2">
+    <div class="metric-label">VirusTotal Enabled</div>
+    <div class="metric-date">{{ "Si" if overview_stats.virustotal_enabled else "No" }}</div>
+    <div class="metric-caption">Threat Intelligence</div>
+  </div>
+  <div class="metric-card animate-in delay-3">
+    <div class="metric-label">Uptime Sites</div>
+    <div class="metric-value">{{ overview_stats.uptime_sites }}</div>
+    <div class="metric-caption">Monitores configurados</div>
+  </div>
+  <div class="metric-card animate-in">
+    <div class="metric-label">WAF Detected</div>
+    <div class="metric-value">{{ overview_stats.waf_detected }}</div>
+    <div class="metric-caption">Detecciones pasivas</div>
+  </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">SSL Health</div>
+    <div class="metric-date">{{ overview_stats.ssl_health }}</div>
+    <div class="metric-caption">Certificados validos</div>
+  </div>
+  <div class="metric-card animate-in delay-2">
+    <div class="metric-label">OWASP Findings</div>
+    <div class="metric-value">{{ overview_stats.owasp_findings }}</div>
+    <div class="metric-caption">Mapping Top 10</div>
+  </div>
+  <div class="metric-card animate-in delay-3">
+    <div class="metric-label">CVE Count</div>
+    <div class="metric-value">{{ overview_stats.cve_count }}</div>
+    <div class="metric-caption">Coincidencias locales</div>
+  </div>
   <div class="metric-card risk-total animate-in">
     <div class="metric-label">Total de escaneos</div>
     <div class="metric-value">{{ total_scans }}</div>

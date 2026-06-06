@@ -171,6 +171,33 @@ def test_admin_can_login_and_view_dashboard(client):
 
     assert response.status_code == 200
     assert b"Dashboard" in response.data
+    assert b"Nuevo Escaneo" in response.data
+    assert b"Reportes" in response.data
+    assert b"Uptime Monitor" in response.data
+    assert b"Assets" in response.data
+    assert b"IOC Center" in response.data
+    assert b"Threat Intelligence / VirusTotal" in response.data
+    assert b"OWASP Top 10" in response.data
+    assert b"Settings" in response.data
+
+
+def test_requested_web_routes_are_available(client):
+    login(client)
+    expected_ok = [
+        "/dashboard",
+        "/scan/new",
+        "/reports",
+        "/uptime",
+        "/assets",
+        "/iocs",
+        "/threat-intel/virustotal",
+        "/owasp",
+        "/settings",
+    ]
+
+    for path in expected_ok:
+        response = client.get(path)
+        assert response.status_code == 200, path
 
 
 def test_login_updates_last_access(client, app):
@@ -283,6 +310,14 @@ def test_dashboard_shows_soc_summary_charts_and_actions(client, monkeypatch):
 
     assert response.status_code == 200
     assert b"Centro de Operaciones VigiScan" in response.data
+    assert b"Total Assets" in response.data
+    assert b"Total IOCs" in response.data
+    assert b"VirusTotal Enabled" in response.data
+    assert b"Uptime Sites" in response.data
+    assert b"WAF Detected" in response.data
+    assert b"SSL Health" in response.data
+    assert b"OWASP Findings" in response.data
+    assert b"CVE Count" in response.data
     assert b"Total de escaneos" in response.data
     assert b"Riesgo alto" in response.data
     assert b"severityChart" in response.data
