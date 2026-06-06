@@ -1,253 +1,248 @@
 # VigiScan
 
-VigiScan is a defensive web security monitoring and vulnerability assessment
-platform for analysts. It combines a Python CLI, Flask dashboard, executive
-reports, uptime monitoring, asset inventory, IOC tracking, VirusTotal
-reputation, OWASP mapping, local CVE enrichment, passive API, edge protection and TLS checks,
-dependency review, and masked secret detection.
+**Plataforma defensiva para analisis de seguridad web, monitoreo de disponibilidad, gestion de activos, IOC Center, VirusTotal, OWASP Top 10, reportes ejecutivos y monitoreo de infraestructura.**
 
-VigiScan helps detect multiple classes of web risk, but no tool can guarantee
-100% vulnerability coverage. Use it only on assets you own or are explicitly
-authorized to assess.
+Desarrollado por **Kendry Rosario**.
 
-## Requirements
+VigiScan integra una CLI en Python y un dashboard Flask para apoyar tareas defensivas de inventario, evaluacion, monitoreo y reporte. Esta pensado para equipos SOC, NOC, AppSec, DevSecOps y administradores que necesitan una vista centralizada de la postura de seguridad web.
 
-- Python 3.12 or newer
+> Aviso legal: usa VigiScan solo sobre sistemas propios o donde tengas autorizacion explicita. La herramienta esta orientada a evaluacion defensiva, inventario y monitoreo.
 
-## Installation
+## Caracteristicas principales
 
-Install the project in editable mode during development:
+- Dashboard SOC moderno.
+- Escaneo web defensivo HTTP/HTTPS.
+- Clasificacion OWASP Top 10.
+- Enriquecimiento CVE local.
+- Spider seguro y acotado.
+- Passive Scan.
+- Uptime Monitor.
+- Infrastructure Monitor local y remoto.
+- Gestion de Assets.
+- IOC Center.
+- Integracion VirusTotal.
+- Reportes HTML/PDF ejecutivos.
+- Multiidioma ES/EN.
 
-```bash
-python -m pip install -e .
-```
+## Capturas
 
-Optional PDF support for executive reports:
+### Dashboard SOC
 
-```bash
-python -m pip install -e ".[pdf]"
-```
+![Dashboard SOC](docs/screenshots/dashboard.png)
+
+### Reportes
+
+![Reportes](docs/screenshots/reports.png)
+
+### Uptime Monitor
+
+![Uptime Monitor](docs/screenshots/uptime.png)
+
+### Infrastructure Monitor
+
+![Infrastructure Monitor](docs/screenshots/infrastructure.png)
 
 ## Instalacion en Linux Ubuntu 24.04 / 26.04
 
-1. Actualizar sistema:
+Actualiza el sistema e instala dependencias base:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
-```
-
-2. Instalar dependencias:
-
-```bash
 sudo apt install git python3 python3-pip python3-venv -y
 ```
 
-3. Clonar repositorio:
+Clona el repositorio:
 
 ```bash
 git clone https://github.com/nexhost/VigiScan.git
 cd VigiScan
 ```
 
-4. Crear entorno virtual:
+Crea y activa el entorno virtual:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-5. Instalar VigiScan:
+Instala VigiScan:
 
 ```bash
 pip install -e .
 ```
 
-6. Probar CLI:
+Instala soporte PDF opcional:
 
 ```bash
-vigiscan --url https://example.com --report html
+pip install -e ".[pdf]"
 ```
 
-7. Ejecutar dashboard:
+Ejecuta el dashboard:
 
 ```bash
 vigiscan-web
 ```
 
-8. Abrir dashboard:
+Abre:
 
 ```text
 http://127.0.0.1:5000
 ```
 
-9. Acceso por red:
+## Uso CLI
 
-```bash
-VIGISCAN_WEB_HOST=0.0.0.0 VIGISCAN_WEB_PORT=5000 vigiscan-web
-```
-
-10. Credenciales por defecto:
-
-- Usuario: `admin`
-- Contrasena: `admin`
-
-11. Cambiar contrasena desde `Settings`.
-
-12. Actualizar VigiScan:
-
-```bash
-cd ~/VigiScan
-git pull origin main
-source .venv/bin/activate
-pip install -e .
-```
-
-13. Ejecutar pruebas:
-
-```bash
-python -m pytest
-```
-
-14. Errores comunes:
-
-- `externally-managed-environment`: usa un entorno virtual con `python3 -m venv .venv`.
-- `vigiscan command not found`: activa `.venv` o reinstala con `pip install -e .`.
-- Puerto `5000` ocupado: usa `VIGISCAN_WEB_PORT=5001 vigiscan-web`.
-- SQLite bloqueada: cierra otros procesos del dashboard y reintenta.
-- Error PDF / WeasyPrint: instala `pip install -e ".[pdf]"` dentro del entorno virtual. En Linux instala tambien dependencias del sistema si WeasyPrint lo solicita.
-- `git pull` con cambios locales: revisa `git status`, guarda o commitea antes de actualizar.
-- Permisos en Linux: evita `sudo pip`; usa `.venv`.
-
-## Usage
-
-After installation, the command line entry point is available as:
+Ejecuta un analisis defensivo desde terminal:
 
 ```bash
 vigiscan --url https://example.com --report html
 ```
 
-The command shows a professional Rich banner, runs the scanner modules, and
-saves the requested report format.
+Formatos soportados:
 
-CLI options:
+- `html`
+- `json`
+- `txt`
+- `all`
 
-- `--timeout`: HTTP timeout in seconds.
-- `--report`: output format, one of `html`, `json`, `txt`, or `all`.
-- `--output`: output directory for generated reports.
-- `--verbose`: show detailed execution progress.
-
-## Web Dashboard
-
-Start the dashboard with:
+Ejemplo con carpeta de salida:
 
 ```bash
-vigiscan-web
+vigiscan --url https://example.com --report all --output reports
 ```
 
-The first run creates a local SQLite database at `instance/vigiscan.sqlite3`
-and an initial administrator:
+## Uso Dashboard
 
-- Username: `admin`
-- Password: `admin`
+Tambien puedes ejecutar Flask directamente para exponer el dashboard en red:
 
-Override the initial account and server settings with environment variables:
+```bash
+flask --app vigiscan.web.app run --host=0.0.0.0 --port=5000
+```
 
-- `VIGISCAN_ADMIN_USERNAME`
-- `VIGISCAN_ADMIN_PASSWORD`
-- `VIGISCAN_SECRET_KEY`
-- `VIGISCAN_WEB_HOST`
-- `VIGISCAN_WEB_PORT`
-- `VIGISCAN_WEB_DEBUG`
+Variables utiles:
 
-Dashboard scans run the same VigiScan engine used by the CLI. Each scan stores
-the target URL, score, risk level, timestamp, generated HTML report path, and
-full normalized report data in SQLite.
+```bash
+export VIGISCAN_WEB_HOST=0.0.0.0
+export VIGISCAN_WEB_PORT=5000
+export VIGISCAN_SECRET_KEY="change-me"
+```
 
-The web UI starts in Spanish by default and includes a header language selector
-for Spanish/English. Authenticated users keep their selected language in their
-profile and session.
+## Credenciales iniciales
 
-Reports can be downloaded as HTML, JSON and, when the optional PDF backend is
-installed, as executive PDF files under `reports/pdf/`.
-If WeasyPrint cannot render in the current system, VigiScan falls back to
-ReportLab when the `.[pdf]` extra is installed.
+- Usuario: `admin`
+- Contrasena: `admin`
 
-Threat Map is available at `/threat-map`. It can embed a configured external
-source from Settings, and it shows a clearly labeled local demonstration view
-when the external source is disabled or unavailable.
+Cambia la contrasena desde **Configuracion** despues del primer acceso.
 
-Remote infrastructure monitoring is available at `/infrastructure`. Register
-servers as `Local`, `Agent/API` or `Manual`, then associate uptime applications
-and assets with the server that hosts them.
+## Actualizacion desde GitHub
 
-The scanner provides a normalized structure with:
+```bash
+git pull origin main
+source .venv/bin/activate
+pip install -e .
+```
 
-- `ok`: whether URL validation and the HTTP request succeeded.
-- `target`: normalized URL metadata.
-- `request`: outbound request settings such as method and timeout.
-- `response`: HTTP response metadata and a bounded body sample.
-- `error`: normalized validation or request error details.
+Si usas reportes PDF:
 
-## Modules
+```bash
+pip install -e ".[pdf]"
+```
 
-The HTTP security headers module covers:
+Ejecuta pruebas:
 
-- `Content-Security-Policy`
-- `X-Frame-Options`
-- `X-Content-Type-Options`
-- `Strict-Transport-Security`
-- `Referrer-Policy`
-- `Permissions-Policy`
+```bash
+python -m pytest
+```
 
-The technology detection module can identify common technologies from headers,
-cookies, meta tags, and HTML:
+## Modulos del sistema
 
-- Apache
-- Nginx
-- PHP
-- WordPress
-- Laravel
-- OpenSSL
+### Dashboard SOC
 
-The directories module checks a small local wordlist of common sensitive paths:
+Vista central para revisar puntuacion de seguridad, hallazgos, CVE, OWASP, disponibilidad, infraestructura, activos e inteligencia de amenazas.
 
-- `.env`
-- `.git/`
-- `backup.zip`
-- `config.php`
-- `phpinfo.php`
-- `admin/`
-- `login/`
-- `backup/`
+### Escaneo web defensivo
 
-The CVE checker performs local lookups from `data/cve_local.json` and
-relates product, version, CVE, severity, and description. The bundled examples
-include Apache `2.4.49`, WordPress, and OpenSSL.
+Ejecuta solicitudes HTTP/HTTPS controladas para recolectar cabeceras, estado de respuesta, tecnologias y senales de exposicion sin realizar explotacion ofensiva.
 
-The report module generates TXT, JSON, and HTML outputs in `reports/`. Reports
-include an executive summary and a normalized risk score from `0` to `100`.
+### OWASP Top 10
 
-Additional defensive modules include:
+Clasifica hallazgos tecnicos en categorias OWASP para facilitar priorizacion y comunicacion ejecutiva.
 
-- IOC Center for manually tracked indicators of compromise.
-- Regional settings for country, timezone, currency and organization context.
-- VirusTotal integration with encrypted key storage and local cache.
-- TLS analyzer for certificate health and HTTP-to-HTTPS redirect checks.
-- Edge protection detection using passive headers/cookies.
-- API security checks for exposed Swagger/OpenAPI/GraphQL, CORS and methods.
-- Secret scanner with masked evidence.
-- Dependency scanner for local manifests.
+### CVE local
 
-## Roadmap de Integraciones
+Consulta una base local en `data/cve_local.json` para relacionar tecnologias detectadas con vulnerabilidades conocidas.
 
-Future defensive integrations prepared for planning include Wazuh, OpenCTI,
-MISP, Shodan, AbuseIPDB, HaveIBeenPwned, SecurityTrails, Censys, Nuclei
-templates, Semgrep, Gitleaks, Trivy, Grype and OSV.
+### Spider seguro
 
-See `docs/` for complete Linux, usage, dashboard, development and security
-guides.
+Realiza descubrimiento limitado de URLs dentro del alcance configurado, con profundidad controlada.
 
-## Project Layout
+### Passive Scan
+
+Analiza senales pasivas como cabeceras, cookies, configuraciones visibles y metadatos HTTP.
+
+### Uptime Monitor
+
+Monitorea disponibilidad, estado HTTP, SSL, tiempo de respuesta, criticidad, responsable y ambiente de aplicaciones.
+
+### Infrastructure Monitor
+
+Mide CPU, RAM, disco, red, procesos y uptime del host local. Tambien permite registrar servidores remotos por metodo Local, Agent/API o Manual.
+
+### Assets
+
+Inventario de dominios, IPs, URLs, aplicaciones, tecnologias, criticidad, pais, estado y servidor asociado.
+
+### IOC Center
+
+Gestiona indicadores de compromiso con severidad, fuente, campana, TLP, etiquetas, pais relacionado y exportacion CSV/JSON.
+
+### VirusTotal
+
+Permite consultar reputacion de URLs, dominios, IPs o hashes usando API key cifrada y cache local.
+
+### DNS / Dominios
+
+Consulta registros DNS y datos WHOIS/RDAP cuando estan disponibles.
+
+### Threat Map
+
+Muestra una vista SOC de ciberamenazas con fuente externa configurable o visualizacion demostrativa local.
+
+### Reportes HTML/PDF
+
+Genera evidencias HTML/JSON/CSV y reportes PDF ejecutivos con logo, resumen, graficos, hallazgos, OWASP, CVE y plan de remediacion.
+
+### Multiidioma ES/EN
+
+La interfaz inicia en espanol y permite cambiar entre Espanol e Ingles desde el selector del dashboard.
+
+## Reportes ejecutivos PDF
+
+Instala el extra:
+
+```bash
+pip install -e ".[pdf]"
+```
+
+Los PDF se descargan desde el dashboard, detalle de escaneo o reportes. Se guardan en:
+
+```text
+reports/pdf/
+```
+
+El reporte incluye:
+
+- Logo VigiScan.
+- Informe Ejecutivo de Seguridad Web.
+- URL objetivo.
+- Organizacion, pais y zona horaria.
+- Risk Score.
+- Graficos ejecutivos.
+- Detalle tecnico.
+- CVE y OWASP.
+- Plan de remediacion.
+- Footer: `VigiScan | Desarrollado por Kendry Rosario`.
+
+## Estructura del proyecto
 
 ```text
 vigiscan/
@@ -255,45 +250,52 @@ vigiscan/
 |-- scanner.py
 |-- report.py
 |-- modules/
+|-- data/
+|-- docs/
+|   `-- screenshots/
 |-- vigiscan/
-|   |-- __init__.py
+|   |-- modules/
 |   `-- web/
 |       |-- app.py
 |       |-- models.py
-|       |-- auth.py
 |       |-- routes.py
 |       |-- forms.py
 |       |-- templates/
-|       |   |-- base.html
-|       |   |-- login.html
-|       |   |-- dashboard.html
-|       |   |-- scan_new.html
-|       |   |-- scan_detail.html
-|       |   `-- reports.html
 |       `-- static/
-|           |-- css/
-|           `-- js/
-|-- data/
 |-- reports/
 `-- tests/
 ```
 
-## Development
+## Desarrollo
 
-Install development dependencies:
-
-```bash
-python -m pip install -e ".[dev]"
-```
-
-Run tests:
+Instala dependencias de desarrollo:
 
 ```bash
-pytest
+pip install -e ".[dev]"
 ```
 
-Run linting:
+Ejecuta pruebas:
+
+```bash
+python -m pytest
+```
+
+Ejecuta lint:
 
 ```bash
 ruff check .
 ```
+
+## Roadmap
+
+- Wazuh.
+- OpenCTI.
+- MISP.
+- Shodan.
+- AbuseIPDB.
+- PDF avanzado.
+- Alertas.
+
+## Licencia
+
+Consulta [LICENSE](LICENSE).
