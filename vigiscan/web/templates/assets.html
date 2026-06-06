@@ -9,7 +9,10 @@
     <h1>Assets</h1>
     <p>Inventario defensivo de dominios, IPs, aplicaciones y servidores bajo observacion.</p>
   </div>
-  <a class="btn btn-cyber" href="{{ url_for('main.uptime') }}">Uptime Monitor</a>
+  <div class="hero-actions">
+    <a class="btn btn-glow" href="{{ url_for('main.asset_new') }}">Nuevo asset</a>
+    <a class="btn btn-cyber" href="{{ url_for('main.uptime') }}">Uptime Monitor</a>
+  </div>
 </section>
 
 <section class="row g-4 mb-4">
@@ -39,13 +42,41 @@
           <div class="invalid-feedback d-block">{{ error }}</div>
           {% endfor %}
         </div>
+        <div class="row g-2">
+          <div class="col-md-6 mb-3">
+            {{ form.domain.label(class="form-label") }}
+            {{ form.domain(class="form-control cyber-input", placeholder="example.com") }}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.ip_address.label(class="form-label") }}
+            {{ form.ip_address(class="form-control cyber-input", placeholder="203.0.113.10") }}
+          </div>
+        </div>
+        <div class="mb-3">
+          {{ form.url.label(class="form-label") }}
+          {{ form.url(class="form-control cyber-input", placeholder="https://example.com") }}
+        </div>
         <div class="mb-3">
           {{ form.owner.label(class="form-label") }}
           {{ form.owner(class="form-control cyber-input", placeholder="Equipo responsable") }}
         </div>
+        <div class="row g-2">
+          <div class="col-md-6 mb-3">
+            {{ form.country.label(class="form-label") }}
+            {{ form.country(class="form-control cyber-input", placeholder="DO") }}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.criticality.label(class="form-label") }}
+            {{ form.criticality(class="form-select cyber-input") }}
+          </div>
+        </div>
         <div class="mb-3">
           {{ form.environment.label(class="form-label") }}
           {{ form.environment(class="form-select cyber-input") }}
+        </div>
+        <div class="mb-3">
+          {{ form.technology.label(class="form-label") }}
+          {{ form.technology(class="form-control cyber-input", placeholder="Nginx, Flask, WordPress") }}
         </div>
         {{ form.submit_asset(class="btn btn-glow w-100") }}
       </form>
@@ -63,18 +94,34 @@
           <div class="asset-head">
             <div>
               <span class="owasp-tag">{{ asset.asset_type }}</span>
-              <h2>{{ asset.name }}</h2>
+              <h2><a class="link-cyber" href="{{ url_for('main.asset_detail', asset_id=asset.id) }}">{{ asset.name }}</a></h2>
             </div>
-            <span class="badge-muted">{{ asset.environment or "-" }}</span>
+            <span class="badge-muted">{{ asset.criticality or asset.environment or "-" }}</span>
           </div>
           <div class="asset-value text-break">{{ asset.value }}</div>
+          <div class="asset-meta">
+            <span>Dominio/IP/URL</span>
+            <strong class="text-break">{{ asset.domain or asset.ip_address or asset.url or "-" }}</strong>
+          </div>
           <div class="asset-meta">
             <span>Responsable</span>
             <strong>{{ asset.owner or "-" }}</strong>
           </div>
           <div class="asset-meta">
+            <span>Pais</span>
+            <strong>{{ asset.country or "-" }}</strong>
+          </div>
+          <div class="asset-meta">
+            <span>Estado</span>
+            <strong>{{ asset.status or "-" }}</strong>
+          </div>
+          <div class="asset-meta">
             <span>Registrado</span>
-            <strong>{{ asset.created_at.strftime("%Y-%m-%d %H:%M") }}</strong>
+            <strong>{{ local_datetime(asset.created_at) }}</strong>
+          </div>
+          <div class="action-row mt-3">
+            <a class="btn btn-sm btn-cyber" href="{{ url_for('main.asset_detail', asset_id=asset.id) }}">Detalle</a>
+            <a class="btn btn-sm btn-ghost" href="{{ url_for('main.asset_edit', asset_id=asset.id) }}">Editar</a>
           </div>
         </article>
         {% else %}

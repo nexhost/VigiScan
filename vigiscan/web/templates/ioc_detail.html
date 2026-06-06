@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}IOC #{{ indicator.id }} - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">{{ indicator.indicator_type }}</span>
+    <h1>IOC #{{ indicator.id }}</h1>
+    <p class="text-break">{{ indicator.value }}</p>
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-cyber" href="{{ url_for('main.ioc_edit', indicator_id=indicator.id) }}">Editar</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.iocs') }}">Volver</a>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <div class="metric-card"><div class="metric-label">Severidad</div><div class="metric-date">{{ indicator.severity }}</div></div>
+  <div class="metric-card"><div class="metric-label">TLP</div><div class="metric-date">{{ indicator.tlp }}</div></div>
+  <div class="metric-card"><div class="metric-label">Estado</div><div class="metric-date">{{ indicator.status }}</div></div>
+  <div class="metric-card"><div class="metric-label">Pais</div><div class="metric-date">{{ indicator.related_country or "-" }}</div></div>
+</section>
+
+<section class="glass-panel">
+  <div class="panel-heading"><span>Detalle del indicador</span><small>{{ local_datetime(indicator.updated_at) }}</small></div>
+  <div class="cve-detail-grid">
+    <div><span>Fuente</span>{{ indicator.source or "-" }}</div>
+    <div><span>Campana</span>{{ indicator.campaign or "-" }}</div>
+    <div><span>Actor</span>{{ indicator.threat_actor or "-" }}</div>
+    <div><span>Etiquetas</span>{{ indicator.tags or "-" }}</div>
+    <div><span>Primera observacion</span>{{ local_datetime(indicator.first_seen) }}</div>
+    <div><span>Ultima observacion</span>{{ local_datetime(indicator.last_seen) }}</div>
+  </div>
+  <p><strong>Descripcion:</strong> {{ indicator.description or "-" }}</p>
+  <p><strong>Notas:</strong> {{ indicator.notes or "-" }}</p>
+  <form method="post" action="{{ url_for('main.ioc_delete', indicator_id=indicator.id) }}" onsubmit="return confirm('Eliminar este IOC?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-danger-glow" type="submit">Eliminar IOC</button>
+  </form>
+</section>
+{% endblock %}

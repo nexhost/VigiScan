@@ -91,6 +91,26 @@
     <div class="metric-caption">Caidas o SSL a revisar</div>
     <div class="risk-signal risk-high"></div>
   </div>
+  <div class="metric-card animate-in">
+    <div class="metric-label">Pais / Zona horaria</div>
+    <div class="metric-date">{{ regional_settings.country_code }} · {{ regional_settings.timezone }}</div>
+    <div class="metric-caption">{{ regional_settings.organization_name or "Organizacion no configurada" }}</div>
+  </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">IOCs recientes</div>
+    <div class="metric-value">{{ recent_iocs|length }}</div>
+    <div class="metric-caption">Indicadores registrados</div>
+  </div>
+  <div class="metric-card animate-in delay-2">
+    <div class="metric-label">Threat Intelligence</div>
+    <div class="metric-value">{{ vt_summary.cached_results }}</div>
+    <div class="metric-caption">Resultados VT en cache</div>
+  </div>
+  <div class="metric-card animate-in delay-3">
+    <div class="metric-label">Security Posture Score</div>
+    <div class="metric-value">{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}</div>
+    <div class="metric-caption">Mayor es mejor</div>
+  </div>
 </section>
 
 <section class="glass-panel soc-map-panel animate-in delay-1">
@@ -104,6 +124,53 @@
     <span class="map-node node-west"></span>
     <span class="map-node node-south"></span>
     <span class="map-node node-eu"></span>
+  </div>
+</section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in">
+      <div class="panel-heading">
+        <span>Threat Intelligence Summary</span>
+        <a class="btn btn-sm btn-cyber" href="{{ url_for('main.virustotal') }}">VirusTotal</a>
+      </div>
+      <div class="risk-site-list">
+        <div class="risk-site-item"><span>Resultados cacheados</span><strong>{{ vt_summary.cached_results }}</strong></div>
+        <div class="risk-site-item"><span>Ultimo observable</span><strong class="text-break">{{ vt_summary.latest_target }}</strong></div>
+        <div class="risk-site-item"><span>Reputation score</span><strong>{{ vt_summary.latest_reputation }}</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading">
+        <span>IOCs recientes</span>
+        <a class="btn btn-sm btn-cyber" href="{{ url_for('main.iocs') }}">IOC Center</a>
+      </div>
+      <div class="risk-site-list">
+        {% for indicator in recent_iocs %}
+        <div class="risk-site-item">
+          <span class="text-break">{{ indicator.value }}</span>
+          <strong>{{ indicator.severity }}</strong>
+        </div>
+        {% else %}
+        <div class="text-secondary">Sin IOCs registrados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading">
+        <span>SSL Health / WAF Coverage</span>
+        <small>Pasivo</small>
+      </div>
+      <div class="risk-site-list">
+        <div class="risk-site-item"><span>SSL con atencion</span><strong>{{ platform_stats.ssl_attention }}</strong></div>
+        <div class="risk-site-item"><span>Monitores uptime</span><strong>{{ platform_stats.monitored_sites }}</strong></div>
+        <div class="risk-site-item"><span>Zona activa</span><strong>{{ regional_settings.timezone }}</strong></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -275,6 +342,7 @@
               <a class="btn btn-sm btn-cyber" href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">Ver detalle</a>
               <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_html', scan_id=scan.id) }}">HTML</a>
               <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_json', scan_id=scan.id) }}">JSON</a>
+              <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_csv', scan_id=scan.id) }}">CSV</a>
               <form method="post" action="{{ url_for('main.scan_delete', scan_id=scan.id) }}" onsubmit="return confirm('Eliminar este escaneo?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm btn-danger-glow" type="submit">Eliminar</button>

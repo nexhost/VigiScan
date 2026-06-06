@@ -32,6 +32,16 @@ class User(UserMixin, db.Model):
         default=False,
         nullable=False,
     )
+    virustotal_rate_limit_per_minute: Mapped[int] = mapped_column(
+        Integer,
+        default=4,
+        nullable=False,
+    )
+    virustotal_cache_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -136,11 +146,98 @@ class Asset(db.Model):
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     asset_type: Mapped[str] = mapped_column(String(40), nullable=False)
     value: Mapped[str] = mapped_column(String(2048), nullable=False)
+    domain: Mapped[str | None] = mapped_column(String(255))
+    ip_address: Mapped[str | None] = mapped_column(String(80))
+    url: Mapped[str | None] = mapped_column(String(2048))
     owner: Mapped[str | None] = mapped_column(String(160))
+    country: Mapped[str | None] = mapped_column(String(120))
+    criticality: Mapped[str | None] = mapped_column(String(40), default="Media")
+    status: Mapped[str | None] = mapped_column(String(40), default="Activo")
+    technology: Mapped[str | None] = mapped_column(String(160))
     environment: Mapped[str | None] = mapped_column(String(80))
+    notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
     scans: Mapped[list[Scan]] = relationship(back_populates="asset")
+
+
+class SystemSettings(db.Model):
+    """Global regional and organization preferences."""
+
+    __tablename__ = "system_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    country: Mapped[str] = mapped_column(String(120), default="Republica Dominicana", nullable=False)
+    country_code: Mapped[str] = mapped_column(String(8), default="DO", nullable=False)
+    timezone: Mapped[str] = mapped_column(String(80), default="America/Santo_Domingo", nullable=False)
+    language: Mapped[str] = mapped_column(String(16), default="es", nullable=False)
+    currency: Mapped[str] = mapped_column(String(12), default="DOP", nullable=False)
+    date_format: Mapped[str] = mapped_column(String(40), default="%Y-%m-%d %H:%M", nullable=False)
+    organization_name: Mapped[str | None] = mapped_column(String(180))
+    organization_sector: Mapped[str | None] = mapped_column(String(120))
+    organization_criticality: Mapped[str] = mapped_column(String(40), default="Media", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
+class Indicator(db.Model):
+    """Indicator of compromise registered by an analyst."""
+
+    __tablename__ = "indicators"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    indicator_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    value: Mapped[str] = mapped_column(String(2048), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(40), default="Medium", nullable=False)
+    source: Mapped[str | None] = mapped_column(String(160))
+    campaign: Mapped[str | None] = mapped_column(String(160))
+    threat_actor: Mapped[str | None] = mapped_column(String(160))
+    tlp: Mapped[str] = mapped_column(String(20), default="TLP:AMBER", nullable=False)
+    tags: Mapped[str | None] = mapped_column(String(512))
+    related_country: Mapped[str | None] = mapped_column(String(120))
+    first_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(40), default="Active", nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
+class VirusTotalResult(db.Model):
+    """Cached VirusTotal observable reputation result."""
+
+    __tablename__ = "virustotal_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    observable_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    observable_value: Mapped[str] = mapped_column(String(2048), nullable=False)
+    malicious: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    suspicious: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    harmless: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    undetected: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reputation: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    categories: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    raw_json: Mapped[dict[str, object] | None] = mapped_column(JSON)
+    queried_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

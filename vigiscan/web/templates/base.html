@@ -43,6 +43,10 @@
           <span class="nav-icon">U</span>
           Uptime Monitor
         </a>
+        <a class="{% if request.endpoint in ['main.iocs', 'main.ioc_new', 'main.ioc_detail', 'main.ioc_edit'] %}active{% endif %}" href="{{ url_for('main.iocs') }}">
+          <span class="nav-icon">I</span>
+          Indicadores de Compromiso
+        </a>
         <a class="{% if request.endpoint == 'main.virustotal' %}active{% endif %}" href="{{ url_for('main.virustotal') }}">
           <span class="nav-icon">T</span>
           Threat Intelligence

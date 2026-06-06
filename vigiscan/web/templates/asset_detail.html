@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Asset {{ asset.name }} - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Asset detail</span>
+    <h1>{{ asset.name }}</h1>
+    <p class="text-break">{{ asset.value }}</p>
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-cyber" href="{{ url_for('main.asset_edit', asset_id=asset.id) }}">Editar</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.assets') }}">Volver</a>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <div class="metric-card"><div class="metric-label">Tipo</div><div class="metric-date">{{ asset.asset_type }}</div></div>
+  <div class="metric-card"><div class="metric-label">Criticidad</div><div class="metric-date">{{ asset.criticality or "-" }}</div></div>
+  <div class="metric-card"><div class="metric-label">Estado</div><div class="metric-date">{{ asset.status or "-" }}</div></div>
+  <div class="metric-card"><div class="metric-label">Escaneos</div><div class="metric-value">{{ asset.scans|length }}</div></div>
+</section>
+
+<section class="row g-4">
+  <div class="col-lg-5">
+    <div class="glass-panel h-100">
+      <div class="panel-heading"><span>Contexto</span><small>{{ asset.country or "-" }}</small></div>
+      <div class="cve-detail-grid">
+        <div><span>Dominio</span>{{ asset.domain or "-" }}</div>
+        <div><span>IP</span>{{ asset.ip_address or "-" }}</div>
+        <div><span>URL</span>{{ asset.url or "-" }}</div>
+        <div><span>Ambiente</span>{{ asset.environment or "-" }}</div>
+        <div><span>Responsable</span>{{ asset.owner or "-" }}</div>
+        <div><span>Tecnologia</span>{{ asset.technology or "-" }}</div>
+      </div>
+      <p>{{ asset.notes or "Sin notas." }}</p>
+      <form method="post" action="{{ url_for('main.asset_delete', asset_id=asset.id) }}" onsubmit="return confirm('Eliminar este asset?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-danger-glow" type="submit">Eliminar asset</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="glass-panel h-100">
+      <div class="panel-heading"><span>Historico de riesgo</span><small>Escaneos asociados</small></div>
+      <div class="chart-panel"><canvas id="assetRiskChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<section class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <div class="glass-panel h-100">
+      <div class="panel-heading"><span>Uptime relacionado</span><small>{{ related_sites|length }} monitores</small></div>
+      <div class="cve-stack">
+        {% for site in related_sites %}
+        <div class="risk-site-item"><span>{{ site.name }}</span><strong>{{ site.uptime_percentage }}%</strong></div>
+        {% else %}
+        <div class="text-secondary">Sin monitores relacionados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="glass-panel h-100">
+      <div class="panel-heading"><span>CVE relacionadas</span><small>{{ related_cves|length }} hallazgos</small></div>
+      <div class="cve-stack">
+        {% for cve in related_cves %}
+        <div class="risk-site-item"><span>{{ cve.cve_id or cve.cve }}</span><strong>{{ cve.severity }}</strong></div>
+        {% else %}
+        <div class="text-secondary">Sin CVE relacionadas.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+  const riskHistory = {{ risk_history | tojson }};
+  new Chart(document.getElementById("assetRiskChart"), {
+    type: "line",
+    data: { labels: riskHistory.labels, datasets: [{ data: riskHistory.values, borderColor: "#37d6e8", backgroundColor: "#37d6e822", fill: true, tension: 0.35 }] },
+    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, suggestedMax: 100 } }, plugins: { legend: { display: false } } }
+  });
+</script>
+{% endblock %}

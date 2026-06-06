@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import (
     Blueprint,
@@ -20,6 +23,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy import or_
 
 from modules.cve_checker import check_tech_report
 from modules.directories import DirectoryCheckConfig, analyze_directories
@@ -32,9 +36,12 @@ from modules.owasp_classifier import (
 from modules.tech_detect import analyze_technologies
 from report import ReportDocument, build_report, save_report
 from scanner import ScanRequest, ScannerConfig, create_scanner
+from vigiscan.modules.api_security import analyze_api_security
 from vigiscan.modules.passive_scan import analyze_passive
 from vigiscan.modules.screenshot import capture_site_screenshot
+from vigiscan.modules.secret_scanner import scan_text as scan_secrets_in_text
 from vigiscan.modules.spider import SpiderConfig, crawl_site
+from vigiscan.modules.tls_analyzer import analyze_tls
 from vigiscan.modules.uptime import check_url
 from vigiscan.modules.virustotal import (
     decrypt_api_key,
@@ -42,17 +49,30 @@ from vigiscan.modules.virustotal import (
     encrypt_api_key,
     query_reputation,
 )
+from vigiscan.modules.waf_detect import detect_waf
 from vigiscan.web.forms import (
     AssetForm,
+    IndicatorForm,
     LoginForm,
     MonitoredSiteForm,
     PasswordChangeForm,
     ProfileForm,
+    RegionalSettingsForm,
     ScanForm,
     VirusTotalLookupForm,
     VirusTotalSettingsForm,
 )
-from vigiscan.web.models import Asset, MonitoredSite, Scan, UptimeCheck, User, db
+from vigiscan.web.models import (
+    Asset,
+    Indicator,
+    MonitoredSite,
+    Scan,
+    SystemSettings,
+    UptimeCheck,
+    User,
+    VirusTotalResult,
+    db,
+)
 
 bp = Blueprint("main", __name__)
 
@@ -73,6 +93,9 @@ def dashboard():
     top_technologies = detected_technology_counts(limit=10)
     dashboard_stats = build_dashboard_stats(all_scans)
     monitored_sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
+    vt_latest = VirusTotalResult.query.order_by(
+        VirusTotalResult.queried_at.desc()
+    ).first()
     return render_template(
         "dashboard.html",
         scans=scans,
@@ -80,6 +103,13 @@ def dashboard():
         risk_counts=risk_counts,
         dashboard_stats=dashboard_stats,
         platform_stats=build_platform_stats(monitored_sites),
+        regional_settings=get_system_settings(),
+        recent_iocs=Indicator.query.order_by(Indicator.created_at.desc()).limit(5).all(),
+        vt_summary={
+            "cached_results": VirusTotalResult.query.count(),
+            "latest_reputation": vt_latest.reputation if vt_latest else 0,
+            "latest_target": vt_latest.observable_value if vt_latest else "-",
+        },
         severity_chart={
             "labels": list(risk_counts.keys()),
             "values": list(risk_counts.values()),
@@ -160,11 +190,26 @@ def settings():
     profile_form = ProfileForm(prefix="profile")
     password_form = PasswordChangeForm(prefix="password")
     vt_form = VirusTotalSettingsForm(prefix="vt")
+    regional_form = RegionalSettingsForm(prefix="regional")
+    settings_record = get_system_settings()
 
     if request.method == "GET":
         profile_form.email.data = current_user.email or ""
         profile_form.display_name.data = current_user.display_name or ""
         vt_form.enabled.data = bool(current_user.virustotal_enabled)
+        vt_form.rate_limit_per_minute.data = current_user.virustotal_rate_limit_per_minute
+        vt_form.cache_enabled.data = bool(current_user.virustotal_cache_enabled)
+        regional_form.country.data = settings_record.country
+        regional_form.country_code.data = settings_record.country_code
+        regional_form.timezone.data = settings_record.timezone
+        regional_form.language.data = settings_record.language
+        regional_form.currency.data = settings_record.currency
+        regional_form.date_format.data = settings_record.date_format
+        regional_form.organization_name.data = settings_record.organization_name or ""
+        regional_form.organization_sector.data = settings_record.organization_sector or ""
+        regional_form.organization_criticality.data = (
+            settings_record.organization_criticality
+        )
 
     if profile_form.submit_profile.data and profile_form.validate_on_submit():
         current_user.email = (profile_form.email.data or "").strip() or None
@@ -192,8 +237,36 @@ def settings():
                 current_app.config["SECRET_KEY"],
             )
         current_user.virustotal_enabled = bool(vt_form.enabled.data)
+        current_user.virustotal_rate_limit_per_minute = (
+            vt_form.rate_limit_per_minute.data or 4
+        )
+        current_user.virustotal_cache_enabled = bool(vt_form.cache_enabled.data)
         db.session.commit()
         flash("Configuracion de VirusTotal actualizada.", "success")
+        return redirect(url_for("main.settings"))
+
+    if (
+        regional_form.submit_regional_settings.data
+        and regional_form.validate_on_submit()
+    ):
+        settings_record.country = regional_form.country.data.strip()
+        settings_record.country_code = regional_form.country_code.data.strip().upper()
+        settings_record.timezone = regional_form.timezone.data.strip()
+        settings_record.language = regional_form.language.data.strip()
+        settings_record.currency = regional_form.currency.data.strip().upper()
+        settings_record.date_format = regional_form.date_format.data
+        settings_record.organization_name = (
+            (regional_form.organization_name.data or "").strip() or None
+        )
+        settings_record.organization_sector = (
+            (regional_form.organization_sector.data or "").strip() or None
+        )
+        settings_record.organization_criticality = (
+            regional_form.organization_criticality.data
+        )
+        settings_record.updated_at = datetime.now(UTC)
+        db.session.commit()
+        flash("Configuracion regional actualizada.", "success")
         return redirect(url_for("main.settings"))
 
     return render_template(
@@ -201,6 +274,14 @@ def settings():
         profile_form=profile_form,
         password_form=password_form,
         vt_form=vt_form,
+        regional_form=regional_form,
+        system_settings=settings_record,
+        vt_key_hint=masked_api_key(
+            decrypt_api_key(
+                current_user.virustotal_api_key_encrypted,
+                current_app.config["SECRET_KEY"],
+            )
+        ),
     )
 
 
@@ -244,6 +325,51 @@ def scan_download_json(scan_id: int):
         mimetype="application/json",
         headers={
             "Content-Disposition": f"attachment; filename=vigiscan-{scan.id}.json"
+        },
+    )
+
+
+@bp.get("/scans/<int:scan_id>/download/csv")
+@login_required
+def scan_download_csv(scan_id: int):
+    scan = db.get_or_404(Scan, scan_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["category", "name", "severity", "detail"])
+    findings = scan_findings(scan)
+    for header in findings["missing_headers"]:
+        writer.writerow([
+            "header",
+            header.get("header"),
+            header.get("severity"),
+            header.get("status"),
+        ])
+    for directory in findings["exposed_directories"]:
+        writer.writerow([
+            "directory",
+            directory.get("path"),
+            "Medium",
+            directory.get("url"),
+        ])
+    for cve in findings["cves"]:
+        writer.writerow([
+            "cve",
+            cve.get("cve_id") or cve.get("cve"),
+            cve.get("severity"),
+            cve.get("description"),
+        ])
+    for owasp in findings["owasp"]:
+        writer.writerow([
+            "owasp",
+            owasp.get("category_id") or owasp.get("category"),
+            owasp.get("severity"),
+            owasp.get("finding"),
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=vigiscan-{scan.id}.csv"
         },
     )
 
@@ -351,13 +477,8 @@ def uptime_check(site_id: int):
 def assets():
     form = AssetForm()
     if form.validate_on_submit():
-        asset = Asset(
-            name=form.name.data.strip(),
-            asset_type=form.asset_type.data,
-            value=form.value.data.strip(),
-            owner=(form.owner.data or "").strip() or None,
-            environment=form.environment.data,
-        )
+        asset = Asset()
+        populate_asset_from_form(asset, form)
         db.session.add(asset)
         db.session.commit()
         flash("Activo registrado.", "success")
@@ -369,11 +490,198 @@ def assets():
     )
 
 
+@bp.route("/assets/new", methods=("GET", "POST"))
+@login_required
+def asset_new():
+    form = AssetForm()
+    if form.validate_on_submit():
+        asset = Asset()
+        populate_asset_from_form(asset, form)
+        db.session.add(asset)
+        db.session.commit()
+        flash("Activo registrado.", "success")
+        return redirect(url_for("main.asset_detail", asset_id=asset.id))
+    return render_template("asset_form.html", form=form, asset=None)
+
+
+@bp.route("/assets/<int:asset_id>")
+@login_required
+def asset_detail(asset_id: int):
+    asset = db.get_or_404(Asset, asset_id)
+    related_sites = [
+        site for site in MonitoredSite.query.all()
+        if asset_matches_value(asset, site.url)
+    ]
+    related_cves = [
+        cve
+        for scan in asset.scans
+        for cve in scan_findings(scan)["cves"]
+    ]
+    return render_template(
+        "asset_detail.html",
+        asset=asset,
+        related_sites=related_sites,
+        related_cves=related_cves,
+        risk_history=asset_risk_history(asset),
+    )
+
+
+@bp.route("/assets/<int:asset_id>/edit", methods=("GET", "POST"))
+@login_required
+def asset_edit(asset_id: int):
+    asset = db.get_or_404(Asset, asset_id)
+    form = AssetForm(obj=asset)
+    if request.method == "GET":
+        form.ip_address.data = asset.ip_address
+    if form.validate_on_submit():
+        populate_asset_from_form(asset, form)
+        db.session.commit()
+        flash("Activo actualizado.", "success")
+        return redirect(url_for("main.asset_detail", asset_id=asset.id))
+    return render_template("asset_form.html", form=form, asset=asset)
+
+
+@bp.post("/assets/<int:asset_id>/delete")
+@login_required
+def asset_delete(asset_id: int):
+    asset = db.get_or_404(Asset, asset_id)
+    db.session.delete(asset)
+    db.session.commit()
+    flash("Activo eliminado.", "success")
+    return redirect(url_for("main.assets"))
+
+
+@bp.route("/iocs", methods=("GET", "POST"))
+@login_required
+def iocs():
+    form = IndicatorForm()
+    if form.validate_on_submit():
+        indicator = Indicator()
+        populate_indicator_from_form(indicator, form)
+        db.session.add(indicator)
+        db.session.commit()
+        flash("IOC registrado.", "success")
+        return redirect(url_for("main.iocs"))
+
+    query = filtered_indicator_query()
+    return render_template(
+        "iocs.html",
+        form=form,
+        indicators=query.order_by(Indicator.created_at.desc()).all(),
+        filters={
+            "q": request.args.get("q", ""),
+            "type": request.args.get("type", ""),
+            "severity": request.args.get("severity", ""),
+            "country": request.args.get("country", ""),
+            "tlp": request.args.get("tlp", ""),
+        },
+    )
+
+
+@bp.route("/iocs/new", methods=("GET", "POST"))
+@login_required
+def ioc_new():
+    form = IndicatorForm()
+    if form.validate_on_submit():
+        indicator = Indicator()
+        populate_indicator_from_form(indicator, form)
+        db.session.add(indicator)
+        db.session.commit()
+        flash("IOC registrado.", "success")
+        return redirect(url_for("main.ioc_detail", indicator_id=indicator.id))
+    return render_template("ioc_form.html", form=form, indicator=None)
+
+
+@bp.get("/iocs/export.csv")
+@login_required
+def ioc_export_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "id",
+        "type",
+        "value",
+        "severity",
+        "source",
+        "campaign",
+        "threat_actor",
+        "tlp",
+        "tags",
+        "related_country",
+        "status",
+    ])
+    for indicator in filtered_indicator_query().order_by(Indicator.created_at.desc()):
+        writer.writerow([
+            indicator.id,
+            indicator.indicator_type,
+            indicator.value,
+            indicator.severity,
+            indicator.source or "",
+            indicator.campaign or "",
+            indicator.threat_actor or "",
+            indicator.tlp,
+            indicator.tags or "",
+            indicator.related_country or "",
+            indicator.status,
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=vigiscan-iocs.csv"},
+    )
+
+
+@bp.get("/iocs/export.json")
+@login_required
+def ioc_export_json():
+    payload = [
+        indicator_to_dict(indicator)
+        for indicator in filtered_indicator_query().order_by(Indicator.created_at.desc())
+    ]
+    return Response(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        mimetype="application/json",
+        headers={"Content-Disposition": "attachment; filename=vigiscan-iocs.json"},
+    )
+
+
+@bp.get("/iocs/<int:indicator_id>")
+@login_required
+def ioc_detail(indicator_id: int):
+    indicator = db.get_or_404(Indicator, indicator_id)
+    return render_template("ioc_detail.html", indicator=indicator)
+
+
+@bp.route("/iocs/<int:indicator_id>/edit", methods=("GET", "POST"))
+@login_required
+def ioc_edit(indicator_id: int):
+    indicator = db.get_or_404(Indicator, indicator_id)
+    form = IndicatorForm(obj=indicator)
+    if form.validate_on_submit():
+        populate_indicator_from_form(indicator, form)
+        db.session.commit()
+        flash("IOC actualizado.", "success")
+        return redirect(url_for("main.ioc_detail", indicator_id=indicator.id))
+    return render_template("ioc_form.html", form=form, indicator=indicator)
+
+
+@bp.post("/iocs/<int:indicator_id>/delete")
+@login_required
+def ioc_delete(indicator_id: int):
+    indicator = db.get_or_404(Indicator, indicator_id)
+    db.session.delete(indicator)
+    db.session.commit()
+    flash("IOC eliminado.", "success")
+    return redirect(url_for("main.iocs"))
+
+
+@bp.route("/threat-intel/virustotal", methods=("GET", "POST"))
 @bp.route("/threat-intelligence/virustotal", methods=("GET", "POST"))
 @login_required
 def virustotal():
     form = VirusTotalLookupForm()
     result = None
+    cached = False
     if form.validate_on_submit():
         api_key = (
             decrypt_api_key(
@@ -384,13 +692,239 @@ def virustotal():
             else None
         )
         kind = detect_kind(form.target.data.strip())
-        result = query_reputation(form.target.data.strip(), api_key, kind=kind)
+        result, cached = query_virustotal_with_cache(
+            form.target.data.strip(),
+            api_key,
+            kind=kind,
+            cache_enabled=bool(current_user.virustotal_cache_enabled),
+        )
     return render_template(
         "virustotal.html",
         form=form,
         result=result,
+        cached=cached,
         enabled=bool(current_user.virustotal_enabled),
+        vt_key_hint=masked_api_key(
+            decrypt_api_key(
+                current_user.virustotal_api_key_encrypted,
+                current_app.config["SECRET_KEY"],
+            )
+        ),
     )
+
+
+def get_system_settings() -> SystemSettings:
+    """Return the singleton regional settings row."""
+    settings_record = SystemSettings.query.first()
+    if settings_record is None:
+        settings_record = SystemSettings()
+        db.session.add(settings_record)
+        db.session.commit()
+    return settings_record
+
+
+def local_datetime(value: datetime | None) -> str:
+    """Format a datetime using configured local timezone and format."""
+    if value is None:
+        return "-"
+    settings_record = get_system_settings()
+    try:
+        timezone = ZoneInfo(settings_record.timezone)
+    except ZoneInfoNotFoundError:
+        timezone = UTC
+    aware = _aware_datetime(value).astimezone(timezone)
+    return aware.strftime(settings_record.date_format)
+
+
+def masked_api_key(api_key: str | None) -> str:
+    """Show only the last four API key characters."""
+    if not api_key:
+        return "No configurada"
+    tail = api_key[-4:] if len(api_key) >= 4 else api_key
+    return f"********{tail}"
+
+
+def populate_asset_from_form(asset: Asset, form: AssetForm) -> None:
+    """Persist asset fields from a submitted form."""
+    value = (form.value.data or "").strip()
+    domain = (form.domain.data or "").strip()
+    ip_address = (form.ip_address.data or "").strip()
+    url = (form.url.data or "").strip()
+    asset.name = form.name.data.strip()
+    asset.asset_type = form.asset_type.data
+    asset.value = value or domain or ip_address or url
+    asset.domain = domain or None
+    asset.ip_address = ip_address or None
+    asset.url = url or None
+    asset.owner = (form.owner.data or "").strip() or None
+    asset.country = (form.country.data or "").strip() or None
+    asset.criticality = form.criticality.data
+    asset.status = form.status.data
+    asset.technology = (form.technology.data or "").strip() or None
+    asset.environment = form.environment.data
+    asset.notes = (form.notes.data or "").strip() or None
+
+
+def asset_matches_value(asset: Asset, candidate: str | None) -> bool:
+    """Check whether an asset field appears in a candidate URL/value."""
+    if not candidate:
+        return False
+    normalized = candidate.lower()
+    values = [
+        asset.value,
+        asset.domain,
+        asset.ip_address,
+        asset.url,
+    ]
+    return any(value and str(value).lower() in normalized for value in values)
+
+
+def asset_risk_history(asset: Asset) -> dict[str, list[Any]]:
+    """Build a compact risk history chart for an asset."""
+    scans = sorted(asset.scans, key=lambda item: item.created_at)[-12:]
+    return {
+        "labels": [local_datetime(scan.created_at) for scan in scans],
+        "values": [scan.score or 0 for scan in scans],
+    }
+
+
+def populate_indicator_from_form(indicator: Indicator, form: IndicatorForm) -> None:
+    """Persist IOC fields from a submitted form."""
+    indicator.indicator_type = form.indicator_type.data
+    indicator.value = form.value.data.strip()
+    indicator.description = (form.description.data or "").strip() or None
+    indicator.severity = form.severity.data
+    indicator.source = (form.source.data or "").strip() or None
+    indicator.campaign = (form.campaign.data or "").strip() or None
+    indicator.threat_actor = (form.threat_actor.data or "").strip() or None
+    indicator.tlp = form.tlp.data
+    indicator.tags = (form.tags.data or "").strip() or None
+    indicator.related_country = (form.related_country.data or "").strip() or None
+    indicator.first_seen = form.first_seen.data
+    indicator.last_seen = form.last_seen.data
+    indicator.status = form.status.data
+    indicator.notes = (form.notes.data or "").strip() or None
+    indicator.updated_at = datetime.now(UTC)
+
+
+def filtered_indicator_query():
+    """Apply IOC search and filter parameters."""
+    query = Indicator.query
+    search = request.args.get("q", "").strip()
+    indicator_type = request.args.get("type", "").strip()
+    severity = request.args.get("severity", "").strip()
+    country = request.args.get("country", "").strip()
+    tlp = request.args.get("tlp", "").strip()
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            or_(
+                Indicator.value.ilike(like),
+                Indicator.description.ilike(like),
+                Indicator.tags.ilike(like),
+                Indicator.source.ilike(like),
+            )
+        )
+    if indicator_type:
+        query = query.filter(Indicator.indicator_type == indicator_type)
+    if severity:
+        query = query.filter(Indicator.severity == severity)
+    if country:
+        query = query.filter(Indicator.related_country.ilike(f"%{country}%"))
+    if tlp:
+        query = query.filter(Indicator.tlp == tlp)
+    return query
+
+
+def indicator_to_dict(indicator: Indicator) -> dict[str, Any]:
+    """Serialize one IOC for JSON export."""
+    return {
+        "id": indicator.id,
+        "indicator_type": indicator.indicator_type,
+        "value": indicator.value,
+        "description": indicator.description,
+        "severity": indicator.severity,
+        "source": indicator.source,
+        "campaign": indicator.campaign,
+        "threat_actor": indicator.threat_actor,
+        "tlp": indicator.tlp,
+        "tags": indicator.tags,
+        "related_country": indicator.related_country,
+        "first_seen": indicator.first_seen.isoformat() if indicator.first_seen else None,
+        "last_seen": indicator.last_seen.isoformat() if indicator.last_seen else None,
+        "status": indicator.status,
+        "notes": indicator.notes,
+        "created_at": indicator.created_at.isoformat(),
+        "updated_at": indicator.updated_at.isoformat(),
+    }
+
+
+def query_virustotal_with_cache(
+    target: str,
+    api_key: str | None,
+    *,
+    kind: str,
+    cache_enabled: bool,
+) -> tuple[dict[str, Any], bool]:
+    """Query VT with local cache and clear disabled-key behavior."""
+    now = datetime.now(UTC)
+    cached = (
+        VirusTotalResult.query.filter_by(
+            observable_type=kind,
+            observable_value=target,
+        )
+        .order_by(VirusTotalResult.queried_at.desc())
+        .first()
+    )
+    if cache_enabled and cached and _aware_datetime(cached.expires_at) > now:
+        return virustotal_cache_to_result(cached), True
+
+    result = query_reputation(target, api_key, kind=kind)  # type: ignore[arg-type]
+    if result.get("ok"):
+        raw_json = result.get("raw_json")
+        stats = result.get("stats", {})
+        reputation = int(result.get("reputation", 0))
+        cached_result = VirusTotalResult(
+            observable_type=kind,
+            observable_value=target,
+            malicious=int(stats.get("malicious", result.get("malicious", 0))),
+            suspicious=int(stats.get("suspicious", result.get("suspicious", 0))),
+            harmless=int(stats.get("harmless", result.get("harmless", 0))),
+            undetected=int(stats.get("undetected", result.get("undetected", 0))),
+            reputation=reputation,
+            categories=result.get("categories") if isinstance(result.get("categories"), dict) else {},
+            raw_json=raw_json if isinstance(raw_json, dict) else result,
+            queried_at=now,
+            expires_at=now + timedelta(hours=24),
+        )
+        db.session.add(cached_result)
+        db.session.commit()
+    return result, False
+
+
+def virustotal_cache_to_result(cached: VirusTotalResult) -> dict[str, Any]:
+    """Convert a cached VT row to the template result shape."""
+    return {
+        "enabled": True,
+        "ok": True,
+        "kind": cached.observable_type,
+        "target": cached.observable_value,
+        "malicious": cached.malicious,
+        "suspicious": cached.suspicious,
+        "harmless": cached.harmless,
+        "undetected": cached.undetected,
+        "reputation": cached.reputation,
+        "categories": cached.categories or {},
+        "raw_json": cached.raw_json or {},
+        "last_analysis_date": local_datetime(cached.queried_at),
+        "stats": {
+            "malicious": cached.malicious,
+            "suspicious": cached.suspicious,
+            "harmless": cached.harmless,
+            "undetected": cached.undetected,
+        },
+        "message": "Resultado servido desde cache local.",
+    }
 
 
 def run_vigiscan_scan(scan: Scan, *, options: dict[str, Any] | None = None) -> None:
@@ -400,6 +934,19 @@ def run_vigiscan_scan(scan: Scan, *, options: dict[str, Any] | None = None) -> N
         report_doc = execute_scan(scan.target_url, options=scan_options)
         report_dir = Path(str(current_app.config["VIGISCAN_REPORT_DIR"]))
         report_doc["scan_options"] = scan_options
+        settings_record = get_system_settings()
+        report_doc["regional_settings"] = {
+            "country": settings_record.country,
+            "country_code": settings_record.country_code,
+            "timezone": settings_record.timezone,
+            "language": settings_record.language,
+            "currency": settings_record.currency,
+            "date_format": settings_record.date_format,
+            "organization_name": settings_record.organization_name,
+            "organization_sector": settings_record.organization_sector,
+            "organization_criticality": settings_record.organization_criticality,
+            "generated_at_local": local_datetime(datetime.now(UTC)),
+        }
         if scan_options["screenshot"]:
             screenshot_result = capture_site_screenshot(
                 scan.target_url,
@@ -448,6 +995,14 @@ def run_vigiscan_scan(scan: Scan, *, options: dict[str, Any] | None = None) -> N
     scan.error_message = None
 
 
+def safe_module_call(factory):
+    """Run optional defensive module without aborting the whole scan."""
+    try:
+        return factory()
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
 def execute_scan(
     target_url: str,
     *,
@@ -483,6 +1038,17 @@ def execute_scan(
         "cve_checker": cve_report,
         "directories": directories_report,
         "surface": surface_report,
+        "tls_analyzer": safe_module_call(lambda: analyze_tls(target_url)),
+        "waf_detect": safe_module_call(lambda: detect_waf(scan_result)),
+        "api_security": safe_module_call(
+            lambda: analyze_api_security(target_url, scan_result)
+        ),
+        "secret_scanner": safe_module_call(
+            lambda: scan_secrets_in_text(
+                str((scan_result.get("response") or {}).get("body_sample") or ""),
+                source=target_url,
+            )
+        ),
     }
     if int(scan_options["spider_depth"]) > 0:
         modules["spider"] = crawl_site(

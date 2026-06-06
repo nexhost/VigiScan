@@ -1,11 +1,14 @@
 # VigiScan
 
-VigiScan is a Python 3.12 command line security scanner scaffold focused on
-small, composable modules and local report generation.
+VigiScan is a defensive web security monitoring and vulnerability assessment
+platform for analysts. It combines a Python CLI, Flask dashboard, executive
+reports, uptime monitoring, asset inventory, IOC tracking, VirusTotal
+reputation, OWASP mapping, local CVE enrichment, passive API/WAF/TLS checks,
+dependency review, and masked secret detection.
 
-The current version includes an HTTP scanner boundary, security header checks,
-technology detection, common path exposure checks, local CVE lookup, report
-generation, and a Flask web dashboard.
+VigiScan helps detect multiple classes of web risk, but no tool can guarantee
+100% vulnerability coverage. Use it only on assets you own or are explicitly
+authorized to assess.
 
 ## Requirements
 
@@ -18,6 +21,95 @@ Install the project in editable mode during development:
 ```bash
 python -m pip install -e .
 ```
+
+## Instalacion en Linux Ubuntu 24.04 / 26.04
+
+1. Actualizar sistema:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+2. Instalar dependencias:
+
+```bash
+sudo apt install git python3 python3-pip python3-venv -y
+```
+
+3. Clonar repositorio:
+
+```bash
+git clone https://github.com/nexhost/VigiScan.git
+cd VigiScan
+```
+
+4. Crear entorno virtual:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+5. Instalar VigiScan:
+
+```bash
+pip install -e .
+```
+
+6. Probar CLI:
+
+```bash
+vigiscan --url https://example.com --report html
+```
+
+7. Ejecutar dashboard:
+
+```bash
+vigiscan-web
+```
+
+8. Abrir dashboard:
+
+```text
+http://127.0.0.1:5000
+```
+
+9. Acceso por red:
+
+```bash
+VIGISCAN_WEB_HOST=0.0.0.0 VIGISCAN_WEB_PORT=5000 vigiscan-web
+```
+
+10. Credenciales por defecto:
+
+- Usuario: `admin`
+- Contrasena: `admin`
+
+11. Cambiar contrasena desde `Settings`.
+
+12. Actualizar VigiScan:
+
+```bash
+cd ~/VigiScan
+git pull origin main
+source .venv/bin/activate
+pip install -e .
+```
+
+13. Ejecutar pruebas:
+
+```bash
+python -m pytest
+```
+
+14. Errores comunes:
+
+- `externally-managed-environment`: usa un entorno virtual con `python3 -m venv .venv`.
+- `vigiscan command not found`: activa `.venv` o reinstala con `pip install -e .`.
+- Puerto `5000` ocupado: usa `VIGISCAN_WEB_PORT=5001 vigiscan-web`.
+- SQLite bloqueada: cierra otros procesos del dashboard y reintenta.
+- `git pull` con cambios locales: revisa `git status`, guarda o commitea antes de actualizar.
+- Permisos en Linux: evita `sudo pip`; usa `.venv`.
 
 ## Usage
 
@@ -110,6 +202,20 @@ include Apache `2.4.49`, WordPress, and OpenSSL.
 
 The report module generates TXT, JSON, and HTML outputs in `reports/`. Reports
 include an executive summary and a normalized risk score from `0` to `100`.
+
+Additional defensive modules include:
+
+- IOC Center for manually tracked indicators of compromise.
+- Regional settings for country, timezone, currency and organization context.
+- VirusTotal integration with encrypted key storage and local cache.
+- TLS analyzer for certificate health and HTTP-to-HTTPS redirect checks.
+- WAF detection using passive headers/cookies.
+- API security checks for exposed Swagger/OpenAPI/GraphQL, CORS and methods.
+- Secret scanner with masked evidence.
+- Dependency scanner for local manifests.
+
+See `docs/` for complete Linux, usage, dashboard, development and security
+guides.
 
 ## Project Layout
 

@@ -12,6 +12,7 @@
   <div class="hero-actions">
     <a class="btn btn-ghost" href="{{ url_for('main.scan_download_html', scan_id=scan.id) }}">HTML</a>
     <a class="btn btn-ghost" href="{{ url_for('main.scan_download_json', scan_id=scan.id) }}">JSON</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.scan_download_csv', scan_id=scan.id) }}">CSV</a>
     <a class="btn btn-cyber" href="{{ url_for('main.dashboard') }}">Volver</a>
   </div>
 </section>

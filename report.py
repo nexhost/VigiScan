@@ -228,6 +228,13 @@ def render_txt(report: ReportDocument) -> str:
 def render_html(report: ReportDocument) -> str:
     """Render a report as a self-contained professional HTML document."""
     target = escape(report["target_url"] or "N/A")
+    regional = report.get("regional_settings", {})
+    if not isinstance(regional, dict):
+        regional = {}
+    organization = escape(str(regional.get("organization_name") or "Organizacion no configurada"))
+    country = escape(str(regional.get("country") or "-"))
+    timezone = escape(str(regional.get("timezone") or "UTC"))
+    generated_local = escape(str(regional.get("generated_at_local") or report["generated_at"]))
     risk_level = escape(report["risk"]["level"])
     risk_class = risk_level.lower()
     modules_html = "\n".join(
@@ -451,8 +458,10 @@ def render_html(report: ReportDocument) -> str:
         <div>
           <h1>VigiScan Security Report</h1>
           <div class="credit">{DEVELOPER_CREDIT}</div>
+          <div class="meta">Organizacion: {organization}</div>
           <div class="meta">Target: {target}</div>
-          <div class="meta">Generated: {escape(report['generated_at'])}</div>
+          <div class="meta">Pais: {country} · Zona horaria: {timezone}</div>
+          <div class="meta">Generated: {generated_local}</div>
         </div>
       </div>
     </header>

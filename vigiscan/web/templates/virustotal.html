@@ -24,6 +24,8 @@
         VirusTotal esta desactivado. Agrega tu API key en Configuracion para habilitar
         consultas de reputacion.
       </div>
+      {% else %}
+      <div class="audit-note">API key activa: {{ vt_key_hint }}. Cache local: {{ "hit" if cached else "consulta/cache miss" }}.</div>
       {% endif %}
       <form method="post" novalidate>
         {{ form.hidden_tag() }}
@@ -50,9 +52,10 @@
         {% else %}
         <div class="vt-result">
           <div class="vt-score">
-            <span>{{ result.stats.malicious + result.stats.suspicious }}</span>
-            <small>detecciones</small>
+            <span>{{ result.reputation if result.reputation is defined else result.stats.malicious + result.stats.suspicious }}</span>
+            <small>reputation score</small>
           </div>
+          <div class="audit-note">{{ result.stats.malicious + result.stats.suspicious }} detecciones reportadas por vendors.</div>
           <div class="vt-facts">
             <div><span>Objetivo</span><strong class="text-break">{{ result.target }}</strong></div>
             <div><span>Tipo</span><strong>{{ result.kind }}</strong></div>
@@ -60,10 +63,23 @@
             <div><span>Sospechoso</span><strong>{{ result.stats.suspicious }}</strong></div>
             <div><span>Inofensivo</span><strong>{{ result.stats.harmless }}</strong></div>
             <div><span>No detectado</span><strong>{{ result.stats.undetected }}</strong></div>
+            <div><span>Ultimo analisis</span><strong>{{ result.last_analysis_date or "-" }}</strong></div>
+            <div><span>Cache</span><strong>{{ "Local" if cached else "Nuevo" }}</strong></div>
           </div>
-          {% if result.permalink %}
-          <a class="btn btn-cyber mt-3" href="{{ result.permalink }}" target="_blank" rel="noreferrer">Abrir referencia</a>
+          {% if result.categories %}
+          <div class="glass-panel mt-3">
+            <div class="panel-heading"><span>Categories</span><small>{{ result.categories|length }} entradas</small></div>
+            <div class="cve-stack">
+              {% for vendor, category in result.categories.items() %}
+              <div class="risk-site-item"><span>{{ vendor }}</span><strong>{{ category }}</strong></div>
+              {% endfor %}
+            </div>
+          </div>
           {% endif %}
+          <details class="glass-panel mt-3">
+            <summary class="fw-bold">Raw JSON opcional</summary>
+            <pre class="mt-3 mb-0 text-break">{{ result.raw_json | default({}) | tojson(indent=2) }}</pre>
+          </details>
         </div>
         {% endif %}
       {% else %}

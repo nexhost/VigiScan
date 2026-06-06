@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Editar" if asset else "Nuevo" }} Asset - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Attack surface</span>
+    <h1>{{ "Editar asset" if asset else "Nuevo asset" }}</h1>
+    <p>Registra contexto operativo para relacionar escaneos, uptime y CVE.</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_for('main.assets') }}">Volver</a>
+</section>
+
+<section class="glass-panel scan-form-panel animate-in delay-1">
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="row g-3">
+      <div class="col-md-6">
+        {{ form.name.label(class="form-label") }}
+        {{ form.name(class="form-control cyber-input") }}
+      </div>
+      <div class="col-md-6">
+        {{ form.asset_type.label(class="form-label") }}
+        {{ form.asset_type(class="form-select cyber-input") }}
+      </div>
+      <div class="col-md-6">
+        {{ form.value.label(class="form-label") }}
+        {{ form.value(class="form-control cyber-input") }}
+        {% for error in form.value.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="col-md-6">
+        {{ form.domain.label(class="form-label") }}
+        {{ form.domain(class="form-control cyber-input") }}
+      </div>
+      <div class="col-md-6">
+        {{ form.ip_address.label(class="form-label") }}
+        {{ form.ip_address(class="form-control cyber-input") }}
+      </div>
+      <div class="col-md-6">
+        {{ form.url.label(class="form-label") }}
+        {{ form.url(class="form-control cyber-input") }}
+      </div>
+      <div class="col-md-6">
+        {{ form.environment.label(class="form-label") }}
+        {{ form.environment(class="form-select cyber-input") }}
+      </div>
+      <div class="col-md-6">
+        {{ form.owner.label(class="form-label") }}
+        {{ form.owner(class="form-control cyber-input") }}
+      </div>
+      <div class="col-md-4">
+        {{ form.country.label(class="form-label") }}
+        {{ form.country(class="form-control cyber-input") }}
+      </div>
+      <div class="col-md-4">
+        {{ form.criticality.label(class="form-label") }}
+        {{ form.criticality(class="form-select cyber-input") }}
+      </div>
+      <div class="col-md-4">
+        {{ form.status.label(class="form-label") }}
+        {{ form.status(class="form-select cyber-input") }}
+      </div>
+      <div class="col-md-12">
+        {{ form.technology.label(class="form-label") }}
+        {{ form.technology(class="form-control cyber-input") }}
+      </div>
+      <div class="col-12">
+        {{ form.notes.label(class="form-label") }}
+        {{ form.notes(class="form-control cyber-input", rows="4") }}
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+      {{ form.submit_asset(class="btn btn-glow") }}
+      <a class="btn btn-ghost" href="{{ url_for('main.assets') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

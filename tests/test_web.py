@@ -366,6 +366,11 @@ def test_scan_downloads_and_delete_work(client, app, monkeypatch):
     assert json_response.mimetype == "application/json"
     assert b"Content-Security-Policy" in json_response.data
 
+    csv_response = client.get("/scans/1/download/csv")
+    assert csv_response.status_code == 200
+    assert csv_response.mimetype == "text/csv"
+    assert b"CVE-2021-41773" in csv_response.data
+
     delete_response = client.post("/scans/1/delete", follow_redirects=True)
     assert delete_response.status_code == 200
     with app.app_context():

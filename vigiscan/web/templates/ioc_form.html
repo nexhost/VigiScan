@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Editar" if indicator else "Nuevo" }} IOC - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">IOC Center</span>
+    <h1>{{ "Editar IOC" if indicator else "Nuevo IOC" }}</h1>
+    <p>Indicadores registrados manualmente por analistas para seguimiento defensivo.</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_for('main.iocs') }}">Volver</a>
+</section>
+
+<section class="glass-panel scan-form-panel animate-in delay-1">
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="row g-3">
+      <div class="col-md-4">{{ form.indicator_type.label(class="form-label") }}{{ form.indicator_type(class="form-select cyber-input") }}</div>
+      <div class="col-md-8">{{ form.value.label(class="form-label") }}{{ form.value(class="form-control cyber-input") }}</div>
+      <div class="col-md-4">{{ form.severity.label(class="form-label") }}{{ form.severity(class="form-select cyber-input") }}</div>
+      <div class="col-md-4">{{ form.tlp.label(class="form-label") }}{{ form.tlp(class="form-select cyber-input") }}</div>
+      <div class="col-md-4">{{ form.status.label(class="form-label") }}{{ form.status(class="form-select cyber-input") }}</div>
+      <div class="col-md-6">{{ form.source.label(class="form-label") }}{{ form.source(class="form-control cyber-input") }}</div>
+      <div class="col-md-6">{{ form.related_country.label(class="form-label") }}{{ form.related_country(class="form-control cyber-input") }}</div>
+      <div class="col-md-6">{{ form.campaign.label(class="form-label") }}{{ form.campaign(class="form-control cyber-input") }}</div>
+      <div class="col-md-6">{{ form.threat_actor.label(class="form-label") }}{{ form.threat_actor(class="form-control cyber-input") }}</div>
+      <div class="col-md-6">{{ form.first_seen.label(class="form-label") }}{{ form.first_seen(class="form-control cyber-input") }}</div>
+      <div class="col-md-6">{{ form.last_seen.label(class="form-label") }}{{ form.last_seen(class="form-control cyber-input") }}</div>
+      <div class="col-12">{{ form.tags.label(class="form-label") }}{{ form.tags(class="form-control cyber-input", placeholder="phishing, banking, c2") }}</div>
+      <div class="col-12">{{ form.description.label(class="form-label") }}{{ form.description(class="form-control cyber-input", rows="3") }}</div>
+      <div class="col-12">{{ form.notes.label(class="form-label") }}{{ form.notes(class="form-control cyber-input", rows="4") }}</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-4">
+      {{ form.submit_indicator(class="btn btn-glow") }}
+      <a class="btn btn-ghost" href="{{ url_for('main.iocs') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

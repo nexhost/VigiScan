@@ -12,7 +12,7 @@ from sqlalchemy import inspect, text
 
 from vigiscan.web.auth import init_login_manager
 from vigiscan.web.forms import csrf
-from vigiscan.web.models import User, db
+from vigiscan.web.models import SystemSettings, User, db
 from vigiscan.web.routes import bp
 
 
@@ -43,6 +43,15 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     csrf.init_app(app)
     init_login_manager(app)
     app.register_blueprint(bp)
+
+    @app.context_processor
+    def inject_regional_helpers() -> dict[str, Any]:
+        from vigiscan.web.routes import get_system_settings, local_datetime
+
+        return {
+            "system_settings": get_system_settings,
+            "local_datetime": local_datetime,
+        }
 
     if app.config.get("VIGISCAN_INIT_DB", True):
         with app.app_context():
@@ -84,6 +93,8 @@ def init_database() -> None:
     db.create_all()
     _ensure_user_profile_columns()
     _ensure_scan_asset_column()
+    _ensure_asset_columns()
+    _ensure_default_system_settings()
     username = str(current_app.config["VIGISCAN_ADMIN_USERNAME"])
     password = str(current_app.config["VIGISCAN_ADMIN_PASSWORD"])
     admin = User.query.filter_by(username=username).first()
@@ -110,6 +121,14 @@ def _ensure_user_profile_columns() -> None:
         "virustotal_enabled": (
             "ALTER TABLE users ADD COLUMN virustotal_enabled BOOLEAN DEFAULT 0 NOT NULL"
         ),
+        "virustotal_rate_limit_per_minute": (
+            "ALTER TABLE users ADD COLUMN virustotal_rate_limit_per_minute "
+            "INTEGER DEFAULT 4 NOT NULL"
+        ),
+        "virustotal_cache_enabled": (
+            "ALTER TABLE users ADD COLUMN virustotal_cache_enabled "
+            "BOOLEAN DEFAULT 1 NOT NULL"
+        ),
     }
     for column, statement in migrations.items():
         if column not in existing:
@@ -125,6 +144,35 @@ def _ensure_scan_asset_column() -> None:
     existing = {column["name"] for column in inspector.get_columns("scans")}
     if "asset_id" not in existing:
         db.session.execute(text("ALTER TABLE scans ADD COLUMN asset_id INTEGER"))
+        db.session.commit()
+
+
+def _ensure_asset_columns() -> None:
+    """Add attack surface fields for existing SQLite installations."""
+    inspector = inspect(db.engine)
+    if "assets" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("assets")}
+    migrations = {
+        "domain": "ALTER TABLE assets ADD COLUMN domain VARCHAR(255)",
+        "ip_address": "ALTER TABLE assets ADD COLUMN ip_address VARCHAR(80)",
+        "url": "ALTER TABLE assets ADD COLUMN url VARCHAR(2048)",
+        "country": "ALTER TABLE assets ADD COLUMN country VARCHAR(120)",
+        "criticality": "ALTER TABLE assets ADD COLUMN criticality VARCHAR(40) DEFAULT 'Media'",
+        "status": "ALTER TABLE assets ADD COLUMN status VARCHAR(40) DEFAULT 'Activo'",
+        "technology": "ALTER TABLE assets ADD COLUMN technology VARCHAR(160)",
+        "notes": "ALTER TABLE assets ADD COLUMN notes TEXT",
+    }
+    for column, statement in migrations.items():
+        if column not in existing:
+            db.session.execute(text(statement))
+    db.session.commit()
+
+
+def _ensure_default_system_settings() -> None:
+    """Ensure a singleton regional settings row exists."""
+    if SystemSettings.query.first() is None:
+        db.session.add(SystemSettings())
         db.session.commit()
 
 

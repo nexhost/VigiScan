@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}IOC Center - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Threat intelligence</span>
+    <h1>IOC Center</h1>
+    <p>Registra, filtra y exporta indicadores de compromiso para investigacion defensiva.</p>
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-glow" href="{{ url_for('main.ioc_new') }}">Nuevo IOC</a>
+    <a class="btn btn-cyber" href="{{ url_for('main.ioc_export_csv') }}">CSV</a>
+    <a class="btn btn-cyber" href="{{ url_for('main.ioc_export_json') }}">JSON</a>
+  </div>
+</section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading"><span>Registrar IOC</span><small>manual</small></div>
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">{{ form.indicator_type.label(class="form-label") }}{{ form.indicator_type(class="form-select cyber-input") }}</div>
+        <div class="mb-3">
+          {{ form.value.label(class="form-label") }}
+          {{ form.value(class="form-control cyber-input") }}
+          {% for error in form.value.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">{{ form.severity.label(class="form-label") }}{{ form.severity(class="form-select cyber-input") }}</div>
+        <div class="mb-3">{{ form.source.label(class="form-label") }}{{ form.source(class="form-control cyber-input") }}</div>
+        <div class="mb-3">{{ form.tlp.label(class="form-label") }}{{ form.tlp(class="form-select cyber-input") }}</div>
+        {{ form.submit_indicator(class="btn btn-glow w-100") }}
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading"><span>Busqueda y filtros</span><small>{{ indicators|length }} IOCs</small></div>
+      <form class="filter-bar" method="get">
+        <input class="form-control cyber-input" name="q" value="{{ filters.q }}" placeholder="Buscar valor, fuente o etiqueta">
+        <select class="form-select cyber-input" name="type">
+          <option value="">Tipo</option>
+          {% for value, label in form.indicator_type.choices %}
+          <option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select class="form-select cyber-input" name="severity">
+          <option value="">Severidad</option>
+          {% for value, label in form.severity.choices %}
+          <option value="{{ value }}" {% if filters.severity == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <input class="form-control cyber-input" name="country" value="{{ filters.country }}" placeholder="Pais">
+        <select class="form-select cyber-input" name="tlp">
+          <option value="">TLP</option>
+          {% for value, label in form.tlp.choices %}
+          <option value="{{ value }}" {% if filters.tlp == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-cyber" type="submit">Filtrar</button>
+      </form>
+      <div class="table-responsive cyber-table-wrap">
+        <table class="table cyber-table align-middle mb-0">
+          <thead><tr><th>Tipo</th><th>Valor</th><th>Severidad</th><th>TLP</th><th>Pais</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            {% for indicator in indicators %}
+            <tr>
+              <td><span class="owasp-tag">{{ indicator.indicator_type }}</span></td>
+              <td class="text-break">{{ indicator.value }}</td>
+              <td><span class="risk-badge risk-badge-medium">{{ indicator.severity }}</span></td>
+              <td>{{ indicator.tlp }}</td>
+              <td>{{ indicator.related_country or "-" }}</td>
+              <td>{{ indicator.status }}</td>
+              <td class="text-end"><a class="btn btn-sm btn-cyber" href="{{ url_for('main.ioc_detail', indicator_id=indicator.id) }}">Detalle</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-secondary">Sin IOCs registrados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
