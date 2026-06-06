@@ -25,56 +25,56 @@
   <div class="executive-card-grid">
     <article class="executive-card accent-blue" data-tooltip="Postura defensiva agregada">
       <small>Month to date</small>
-      <span>Security Score</span>
+      <span>{{ t("security_score") }}</span>
       <strong data-count="{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}">{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}</strong>
       <canvas class="sparkline" data-values="62,68,66,74,71,79,76,82"></canvas>
       <em>+ 6.1%</em>
     </article>
     <article class="executive-card accent-green" data-tooltip="Escaneos acumulados">
       <small>Month to date</small>
-      <span>Total Scans</span>
+      <span>Total de escaneos</span>
       <strong data-count="{{ total_scans }}">{{ total_scans }}</strong>
       <canvas class="sparkline" data-values="{{ scans_by_day_chart['values']|join(',') }}"></canvas>
       <em>+ 5.1%</em>
     </article>
     <article class="executive-card accent-red" data-tooltip="Hallazgos criticos">
       <small>Month to date</small>
-      <span>Critical Findings</span>
+      <span>Hallazgos criticos</span>
       <strong data-count="{{ dashboard_stats.critical_findings }}">{{ dashboard_stats.critical_findings }}</strong>
       <canvas class="sparkline" data-values="1,0,1,2,1,3,2,4"></canvas>
       <em class="danger">+ 2%</em>
     </article>
     <article class="executive-card accent-orange" data-tooltip="Hallazgos de severidad alta">
       <small>Month to date</small>
-      <span>High Findings</span>
+      <span>Hallazgos altos</span>
       <strong data-count="{{ dashboard_stats.high_findings }}">{{ dashboard_stats.high_findings }}</strong>
       <canvas class="sparkline" data-values="4,5,5,6,4,7,6,8"></canvas>
       <em class="danger">+ 3.4%</em>
     </article>
     <article class="executive-card accent-cyan" data-tooltip="Assets inventariados">
       <small>Month to date</small>
-      <span>Assets Monitored</span>
+      <span>Activos monitoreados</span>
       <strong data-count="{{ overview_stats.total_assets }}">{{ overview_stats.total_assets }}</strong>
       <canvas class="sparkline" data-values="2,3,3,5,6,6,7,8"></canvas>
       <em>+ 12%</em>
     </article>
     <article class="executive-card accent-green" data-tooltip="Disponibilidad promedio">
       <small>Month to date</small>
-      <span>Uptime Global</span>
+      <span>Disponibilidad global</span>
       <strong>{{ platform_stats.average_uptime }}%</strong>
       <canvas class="sparkline" data-values="92,95,97,94,98,99,98,99"></canvas>
       <em>+ 2%</em>
     </article>
     <article class="executive-card accent-purple" data-tooltip="Coincidencias CVE">
       <small>Month to date</small>
-      <span>CVE Detected</span>
+      <span>CVE detectadas</span>
       <strong data-count="{{ dashboard_stats.cve_detected }}">{{ dashboard_stats.cve_detected }}</strong>
       <canvas class="sparkline" data-values="0,1,1,2,2,3,4,4"></canvas>
       <em class="danger">+ 3.4%</em>
     </article>
     <article class="executive-card accent-blue" data-tooltip="Resultados en cache de Threat Intelligence">
       <small>Month to date</small>
-      <span>VirusTotal Alerts</span>
+      <span>Alertas VirusTotal</span>
       <strong data-count="{{ vt_summary.cached_results }}">{{ vt_summary.cached_results }}</strong>
       <canvas class="sparkline" data-values="1,1,2,2,3,3,4,5"></canvas>
       <em>+ 2%</em>
@@ -411,7 +411,7 @@
 <canvas id="severityChart" class="d-none" aria-hidden="true"></canvas>
 
 <section class="dashboard-section-title animate-in">
-  <span class="eyebrow">Recent reports</span>
+  <span class="eyebrow">Reportes recientes</span>
   <h2>Escaneos recientes, acciones y exportaciones</h2>
 </section>
 

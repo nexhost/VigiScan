@@ -25,43 +25,43 @@
       <nav class="sidebar-nav">
         <a class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
           <span class="nav-icon">D</span>
-          Dashboard
+          {{ t("dashboard") }}
         </a>
         <a class="{% if request.endpoint == 'main.scan_new' %}active{% endif %}" href="{{ url_for('main.scan_new') }}">
           <span class="nav-icon">S</span>
-          Nuevo Escaneo
+          {{ t("new_scan") }}
         </a>
         <a class="{% if request.endpoint == 'main.reports' %}active{% endif %}" href="{{ url_for('main.reports') }}">
           <span class="nav-icon">R</span>
-          Reportes
+          {{ t("reports") }}
         </a>
         <a class="{% if request.endpoint in ['main.assets', 'main.asset_new', 'main.asset_detail', 'main.asset_edit'] %}active{% endif %}" href="{{ url_for('main.assets') }}">
           <span class="nav-icon">A</span>
-          Assets
+          {{ t("assets") }}
         </a>
         <a class="{% if request.endpoint in ['main.uptime', 'main.uptime_check', 'main.uptime_edit'] %}active{% endif %}" href="{{ url_for('main.uptime') }}">
           <span class="nav-icon">U</span>
-          Uptime Monitor
+          {{ t("uptime_monitor") }}
         </a>
         <a class="{% if request.endpoint == 'main.infrastructure' %}active{% endif %}" href="{{ url_for('main.infrastructure') }}">
           <span class="nav-icon">M</span>
-          Infrastructure Monitor
+          {{ t("infrastructure_monitor") }}
         </a>
         <a class="{% if request.endpoint in ['main.iocs', 'main.ioc_new', 'main.ioc_detail', 'main.ioc_edit'] %}active{% endif %}" href="{{ url_for('main.iocs') }}">
           <span class="nav-icon">I</span>
-          IOC Center
+          {{ t("ioc_center") }}
         </a>
         <a class="{% if request.endpoint == 'main.virustotal' %}active{% endif %}" href="{{ url_for('main.virustotal') }}">
           <span class="nav-icon">T</span>
-          Threat Intelligence / VirusTotal
+          {{ t("threat_intelligence") }} / {{ t("virustotal") }}
         </a>
         <a class="{% if request.endpoint == 'main.owasp' %}active{% endif %}" href="{{ url_for('main.owasp') }}">
           <span class="nav-icon">O</span>
-          OWASP Top 10
+          {{ t("owasp_top_10") }}
         </a>
         <a class="{% if request.endpoint == 'main.settings' %}active{% endif %}" href="{{ url_for('main.settings') }}">
           <span class="nav-icon">C</span>
-          Settings
+          {{ t("settings") }}
         </a>
       </nav>
       <div class="sidebar-status">
@@ -81,9 +81,18 @@
         </div>
         <div class="topbar-actions">
           <span class="user-chip">{{ current_user.display_name or current_user.username }}</span>
+          <form class="language-form" method="post" action="{{ url_for('main.set_language') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+            <label class="visually-hidden" for="languageSelect">{{ t("language") }}</label>
+            <select id="languageSelect" class="form-select form-select-sm language-select" name="language" onchange="this.form.submit()">
+              <option value="es" {% if current_language() == "es" %}selected{% endif %}>{{ t("spanish") }}</option>
+              <option value="en" {% if current_language() == "en" %}selected{% endif %}>{{ t("english") }}</option>
+            </select>
+          </form>
           <form method="post" action="{{ url_for('main.logout') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-cyber btn-sm" type="submit">Salir</button>
+            <button class="btn btn-cyber btn-sm" type="submit">{{ t("logout") }}</button>
           </form>
         </div>
       </nav>

@@ -1,20 +1,21 @@
 # Dashboard
 
-El dashboard muestra:
+El dashboard inicia en espanol por defecto y muestra:
 
-- Security Posture Score.
-- Attack Surface Overview.
+- Puntuacion de seguridad.
+- Resumen de superficie de ataque.
 - Vulnerabilidades por severidad.
 - OWASP Top 10 Distribution.
 - CVE Trends.
-- Uptime Monitor.
-- Threat Intelligence Summary.
+- Monitor de disponibilidad.
+- Resumen de inteligencia de amenazas.
 - IOCs recientes.
 - Activos criticos.
 - SSL Health.
 - WAF Coverage.
 - Pais y zona horaria activa.
 - Infrastructure Monitor con CPU, RAM, disco, red, uptime del servidor y procesos.
+- Selector ES/EN en el header.
 
 La configuracion regional controla como se muestran fechas y contexto de
 organizacion. VirusTotal no consulta la API si no hay key configurada o si el
@@ -32,6 +33,9 @@ Rutas principales:
 - `/threat-intel/virustotal`
 - `/owasp`
 - `/settings`
+- `/settings/language`
+- `/reports/<scan_id>/pdf`
+- `/scans/<scan_id>/pdf`
 
 APIs JSON protegidas por login:
 
@@ -41,3 +45,26 @@ APIs JSON protegidas por login:
 - `/api/uptime/history`
 - `/api/infrastructure/metrics`
 - `/api/infrastructure/history`
+
+Reportes ejecutivos PDF:
+
+- Requieren el extra opcional `pip install -e ".[pdf]"`.
+- Incluyen logo VigiScan, creditos de Kendry Rosario, portada, resumen ejecutivo, graficos estaticos, CVE, OWASP, plan de remediacion y conclusion.
+- Se guardan en `reports/pdf/`.
+
+Roadmap de Integraciones:
+
+- Wazuh
+- OpenCTI
+- MISP
+- Shodan
+- AbuseIPDB
+- HaveIBeenPwned
+- SecurityTrails
+- Censys
+- Nuclei templates
+- Semgrep
+- Gitleaks
+- Trivy
+- Grype
+- OSV

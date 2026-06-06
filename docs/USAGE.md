@@ -13,6 +13,12 @@ Dashboard:
 vigiscan-web
 ```
 
+Instalar soporte PDF opcional:
+
+```bash
+pip install -e ".[pdf]"
+```
+
 Modulos principales:
 
 - Nuevo Escaneo: ejecuta analisis defensivo HTTP/HTTPS.
@@ -24,3 +30,15 @@ Modulos principales:
 - OWASP: guia y mapping de hallazgos.
 - Reports: reportes HTML/JSON y evidencia.
 - Settings: perfil, contrasena, region y VirusTotal.
+
+Idioma:
+
+- La interfaz inicia en espanol por defecto.
+- Usa el selector del header para cambiar entre `Espanol` y `English`.
+- La preferencia queda guardada en la sesion y en el usuario autenticado.
+
+Reportes:
+
+- En Reportes y Detalle de Escaneo usa `Ver reporte`, `Descargar HTML`, `Descargar JSON` o `Descargar PDF`.
+- Los PDF ejecutivos se guardan en `reports/pdf/`.
+- Si falta WeasyPrint, instala `pip install -e ".[pdf]"` y vuelve a intentar.

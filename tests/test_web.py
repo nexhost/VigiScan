@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from vigiscan.modules.pdf_report import PDFReportUnavailable
 from vigiscan.modules.screenshot import ScreenshotResult
 from vigiscan.web.app import create_app
 from vigiscan.web.models import Asset, InfrastructureMetric, MonitoredSite, Scan, User, db
@@ -170,16 +171,33 @@ def test_admin_can_login_and_view_dashboard(client):
     response = login(client)
 
     assert response.status_code == 200
-    assert b"Dashboard" in response.data
-    assert b"Nuevo Escaneo" in response.data
+    assert b"Panel de control" in response.data
+    assert b"Nuevo escaneo" in response.data
     assert b"Reportes" in response.data
-    assert b"Uptime Monitor" in response.data
-    assert b"Infrastructure Monitor" in response.data
-    assert b"Assets" in response.data
-    assert b"IOC Center" in response.data
-    assert b"Threat Intelligence / VirusTotal" in response.data
+    assert b"Monitor de disponibilidad" in response.data
+    assert b"Monitor de infraestructura" in response.data
+    assert b"Activos" in response.data
+    assert b"Indicadores de compromiso" in response.data
+    assert b"Inteligencia de amenazas / VirusTotal" in response.data
     assert b"OWASP Top 10" in response.data
-    assert b"Settings" in response.data
+    assert b"Configuracion" in response.data
+
+
+def test_user_can_switch_language_to_english(client, app):
+    login(client)
+    response = client.post(
+        "/settings/language",
+        data={"language": "en", "next": "/dashboard"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Dashboard" in response.data
+    assert b"New scan" in response.data
+    assert b"Uptime Monitor" in response.data
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").one()
+        assert admin.language_preference == "en"
 
 
 def test_requested_web_routes_are_available(client):
@@ -452,6 +470,46 @@ def test_scan_downloads_and_delete_work(client, app, monkeypatch):
     assert delete_response.status_code == 200
     with app.app_context():
         assert Scan.query.count() == 0
+
+
+def test_scan_pdf_route_generates_file_when_backend_available(client, app, monkeypatch):
+    create_completed_scan(client, monkeypatch)
+
+    def fake_generate_pdf(html, output_path, *, base_url=None):
+        assert "Informe Ejecutivo de Seguridad Web" in html
+        assert "Desarrollado por Kendry Rosario" in html
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"%PDF-1.4\n%fake\n")
+        return path
+
+    monkeypatch.setattr("vigiscan.web.routes.generate_pdf_from_html", fake_generate_pdf)
+    response = client.get("/scans/1/pdf")
+
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert b"%PDF-1.4" in response.data
+    with app.app_context():
+        pdf_files = list((Path(app.config["VIGISCAN_REPORT_DIR"]) / "pdf").glob("*.pdf"))
+        assert pdf_files
+
+
+def test_scan_pdf_route_shows_clear_fallback_without_backend(client, monkeypatch):
+    create_completed_scan(client, monkeypatch)
+
+    def fake_generate_pdf(html, output_path, *, base_url=None):
+        raise PDFReportUnavailable('La generacion PDF requiere WeasyPrint. Instala el extra con: pip install -e ".[pdf]"')
+
+    monkeypatch.setattr("vigiscan.web.routes.generate_pdf_from_html", fake_generate_pdf)
+    response = client.get("/reports/1/pdf", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"La generacion PDF requiere WeasyPrint" in response.data
+
+
+def test_pdf_template_exists():
+    assert Path("vigiscan/web/templates/pdf_report.html").exists()
+    assert Path("vigiscan/web/static/css/pdf.css").exists()
 
 
 def test_scan_form_rejects_non_http_urls(client):

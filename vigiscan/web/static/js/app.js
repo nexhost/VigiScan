@@ -41,6 +41,14 @@
     });
   });
 
+  document.querySelectorAll(".pdf-download-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      button.classList.add("disabled");
+      button.setAttribute("aria-disabled", "true");
+      button.textContent = button.dataset.loadingText || "Generando...";
+    });
+  });
+
   document.querySelectorAll("[data-count]").forEach((node) => {
     const target = Number(node.dataset.count);
     if (!Number.isFinite(target)) {

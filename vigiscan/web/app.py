@@ -47,10 +47,13 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     @app.context_processor
     def inject_regional_helpers() -> dict[str, Any]:
         from vigiscan.web.routes import get_system_settings, local_datetime
+        from vigiscan.web.i18n import get_locale, translate
 
         return {
             "system_settings": get_system_settings,
             "local_datetime": local_datetime,
+            "current_language": get_locale,
+            "t": translate,
         }
 
     if app.config.get("VIGISCAN_INIT_DB", True):
@@ -115,6 +118,10 @@ def _ensure_user_profile_columns() -> None:
     migrations = {
         "email": "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
         "display_name": "ALTER TABLE users ADD COLUMN display_name VARCHAR(120)",
+        "language_preference": (
+            "ALTER TABLE users ADD COLUMN language_preference "
+            "VARCHAR(8) DEFAULT 'es' NOT NULL"
+        ),
         "last_login_at": "ALTER TABLE users ADD COLUMN last_login_at DATETIME",
         "virustotal_api_key_encrypted": (
             "ALTER TABLE users ADD COLUMN virustotal_api_key_encrypted TEXT"

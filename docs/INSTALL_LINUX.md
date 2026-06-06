@@ -10,6 +10,7 @@ cd VigiScan
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
+pip install -e ".[pdf]"
 vigiscan --url https://example.com --report html
 vigiscan-web
 ```
@@ -25,9 +26,10 @@ VIGISCAN_WEB_HOST=0.0.0.0 VIGISCAN_WEB_PORT=5000 vigiscan-web
 Actualizacion:
 
 ```bash
+sudo apt update && sudo apt upgrade -y
 git pull origin main
 source .venv/bin/activate
-pip install -e .
+pip install -e ".[pdf]"
 python -m pytest
 ```
 
@@ -38,3 +40,9 @@ Solucion rapida:
 - puerto ocupado: cambia `VIGISCAN_WEB_PORT`.
 - SQLite bloqueada: cierra procesos abiertos.
 - permisos: evita instalar con `sudo pip`.
+- PDF no disponible: instala `pip install -e ".[pdf]"`. Si WeasyPrint solicita librerias del sistema, revisa su mensaje de error e instala los paquetes faltantes desde `apt`.
+
+Reportes generados:
+
+- HTML/JSON/TXT: directorio `reports/`.
+- PDF ejecutivo: directorio `reports/pdf/`.

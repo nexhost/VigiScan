@@ -39,6 +39,7 @@ from report import ReportDocument, build_report, save_report
 from scanner import ScanRequest, ScannerConfig, create_scanner
 from vigiscan.modules.api_security import analyze_api_security
 from vigiscan.modules.infra_monitor import collect_metrics, human_uptime
+from vigiscan.modules.pdf_report import PDFReportUnavailable, generate_pdf_from_html
 from vigiscan.modules.passive_scan import analyze_passive
 from vigiscan.modules.screenshot import capture_site_screenshot
 from vigiscan.modules.secret_scanner import scan_text as scan_secrets_in_text
@@ -52,6 +53,7 @@ from vigiscan.modules.virustotal import (
     query_reputation,
 )
 from vigiscan.modules.waf_detect import detect_waf
+from vigiscan.web.i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from vigiscan.web.forms import (
     AssetForm,
     IndicatorForm,
@@ -168,6 +170,22 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("main.login"))
+
+
+@bp.post("/settings/language")
+@login_required
+def set_language():
+    language = request.form.get("language", DEFAULT_LANGUAGE).strip().lower()
+    if language not in SUPPORTED_LANGUAGES:
+        language = DEFAULT_LANGUAGE
+    current_user.language_preference = language
+    db.session.commit()
+    from flask import session
+
+    session["language"] = language
+    flash("Idioma actualizado." if language == "es" else "Language updated.", "success")
+    next_url = request.form.get("next") or url_for("main.dashboard")
+    return redirect(next_url)
 
 
 @bp.route("/scans/new", methods=("GET", "POST"))
@@ -384,6 +402,38 @@ def scan_download_csv(scan_id: int):
         headers={
             "Content-Disposition": f"attachment; filename=vigiscan-{scan.id}.csv"
         },
+    )
+
+
+@bp.get("/reports/<int:scan_id>/pdf")
+@bp.get("/scans/<int:scan_id>/pdf")
+@login_required
+def scan_download_pdf(scan_id: int):
+    scan = db.get_or_404(Scan, scan_id)
+    pdf_dir = Path(str(current_app.config["VIGISCAN_REPORT_DIR"])) / "pdf"
+    filename_date = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    output_path = pdf_dir / f"vigiscan-report-{scan.id}-{filename_date}.pdf"
+    html = render_template("pdf_report.html", **build_pdf_report_context(scan))
+    try:
+        pdf_path = generate_pdf_from_html(
+            html,
+            output_path,
+            base_url=str(Path(current_app.root_path).resolve()),
+        )
+    except PDFReportUnavailable as exc:
+        flash(str(exc), "warning")
+        return redirect(url_for("main.scan_detail", scan_id=scan.id))
+    except Exception as exc:
+        current_app.logger.exception("PDF report generation failed")
+        flash(f"No se pudo generar el PDF: {exc}", "danger")
+        return redirect(url_for("main.scan_detail", scan_id=scan.id))
+
+    flash("PDF ejecutivo generado correctamente.", "success")
+    return send_file(
+        pdf_path,
+        as_attachment=True,
+        download_name=pdf_path.name,
+        mimetype="application/pdf",
     )
 
 
@@ -891,6 +941,201 @@ def local_datetime(value: datetime | None) -> str:
         timezone = UTC
     aware = _aware_datetime(value).astimezone(timezone)
     return aware.strftime(settings_record.date_format)
+
+
+def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
+    """Build the executive PDF template context for one scan."""
+    report_data = scan.report_data if isinstance(scan.report_data, dict) else None
+    if not report_data or "risk" not in report_data or "executive_summary" not in report_data:
+        report_data = build_report(
+            target_url=scan.target_url,
+            modules={},
+            generated_at=scan.completed_at or scan.created_at,
+        )
+    findings = scan_findings(scan)
+    settings_record = get_system_settings()
+    severity_counts = pdf_severity_counts(findings)
+    charts = [
+        {
+            "title": "Hallazgos por severidad",
+            "items": chart_items_from_counts(severity_counts),
+        },
+        {
+            "title": "Distribucion OWASP Top 10",
+            "items": chart_items_from_counts(
+                _count_values(
+                    item.get("category_id") or item.get("category") or "OWASP"
+                    for item in findings["owasp"]
+                )
+            ),
+        },
+        {
+            "title": "CVE por severidad",
+            "items": chart_items_from_counts(
+                _count_values(str(cve.get("severity") or "Unknown") for cve in findings["cves"])
+            ),
+        },
+        {
+            "title": "Tecnologias detectadas",
+            "items": chart_items_from_counts(
+                _count_values(str(tech.get("name") or "Unknown") for tech in findings["technologies"])
+            ),
+        },
+        {
+            "title": "Score de riesgo",
+            "items": [
+                {
+                    "label": scan.risk_level or report_data["risk"]["level"],
+                    "value": scan.score if scan.score is not None else report_data["risk"]["score"],
+                    "percent": scan.score if scan.score is not None else report_data["risk"]["score"],
+                }
+            ],
+        },
+        {
+            "title": "Estado SSL",
+            "items": chart_items_from_counts(_count_values([pdf_module_state(scan, "tls_analyzer")])),
+        },
+    ]
+    logo_path = Path(current_app.root_path) / "static" / "img" / "vigiscan-logo.svg"
+    return {
+        "scan": scan,
+        "report": report_data,
+        "findings": findings,
+        "organization": settings_record.organization_name or "Organizacion no configurada",
+        "country": settings_record.country,
+        "timezone": settings_record.timezone,
+        "generated_local": local_datetime(datetime.now(UTC)),
+        "logo_url": logo_path.resolve().as_uri(),
+        "severity_counts": severity_counts,
+        "charts": charts,
+        "tls_state": pdf_module_state(scan, "tls_analyzer"),
+        "waf_state": pdf_module_state(scan, "waf_detect"),
+        "api_security_state": pdf_module_state(scan, "api_security"),
+        "secret_state": pdf_module_state(scan, "secret_scanner"),
+        "general_recommendation": pdf_general_recommendation(scan, severity_counts),
+        "remediation_plan": pdf_remediation_plan(findings),
+        "executive_conclusion": pdf_executive_conclusion(scan),
+        "residual_risk": scan.risk_level or report_data["risk"]["level"],
+    }
+
+
+def pdf_severity_counts(findings: dict[str, list[dict[str, Any]]]) -> dict[str, int]:
+    counts = {
+        "Critical": 0,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
+        "Alto": 0,
+        "Medio": 0,
+        "Bajo": 0,
+        "Unknown": 0,
+    }
+    for collection in (
+        findings["missing_headers"],
+        findings["cves"],
+        findings["owasp"],
+    ):
+        for item in collection:
+            severity = str(item.get("severity") or "Unknown")
+            counts[severity] = counts.get(severity, 0) + 1
+    return counts
+
+
+def chart_items_from_counts(counts: dict[str, int]) -> list[dict[str, Any]]:
+    visible = [
+        {"label": label, "value": value}
+        for label, value in counts.items()
+        if value
+    ]
+    if not visible:
+        visible = [{"label": "Sin datos", "value": 0}]
+    max_value = max((item["value"] for item in visible), default=1) or 1
+    return [
+        {
+            "label": item["label"],
+            "value": item["value"],
+            "percent": round((item["value"] / max_value) * 100, 1) if max_value else 0,
+        }
+        for item in visible[:8]
+    ]
+
+
+def _count_values(values: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        label = str(value or "Unknown")
+        counts[label] = counts.get(label, 0) + 1
+    return counts
+
+
+def pdf_module_state(scan: Scan, module_name: str) -> str:
+    report_data = scan.report_data or {}
+    modules = report_data.get("modules") if isinstance(report_data, dict) else None
+    module = modules.get(module_name) if isinstance(modules, dict) else None
+    if not isinstance(module, dict):
+        return "Sin datos"
+    if module.get("error"):
+        return "Requiere revision"
+    if module.get("detections") or module.get("findings") or module.get("alerts"):
+        return "Hallazgos registrados"
+    return "Sin hallazgos relevantes"
+
+
+def pdf_general_recommendation(scan: Scan, severity_counts: dict[str, int]) -> str:
+    high_total = (
+        severity_counts.get("Critical", 0)
+        + severity_counts.get("High", 0)
+        + severity_counts.get("Alto", 0)
+    )
+    if high_total or scan.risk_level == "Alto":
+        return "Priorizar remediaciones criticas y altas antes de cambios funcionales no urgentes."
+    if scan.risk_level == "Medio":
+        return "Planificar remediacion en el siguiente ciclo operativo y validar controles preventivos."
+    return "Mantener monitoreo continuo, parches al dia y revalidacion periodica."
+
+
+def pdf_executive_conclusion(scan: Scan) -> str:
+    score = scan.score if scan.score is not None else 0
+    if scan.risk_level == "Alto" or score >= 70:
+        return "El objetivo presenta exposicion relevante y requiere remediacion prioritaria con validacion posterior."
+    if scan.risk_level == "Medio" or score >= 35:
+        return "El objetivo presenta riesgos gestionables que deben tratarse dentro del ciclo de mejora continua."
+    return "El objetivo no presenta exposicion alta en los controles evaluados, manteniendo monitoreo preventivo."
+
+
+def pdf_remediation_plan(findings: dict[str, list[dict[str, Any]]]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for cve in findings["cves"][:4]:
+        rows.append(
+            {
+                "priority": str(cve.get("severity") or "Alta"),
+                "finding": str(cve.get("cve_id") or cve.get("cve") or "CVE"),
+                "action": str(cve.get("recommendation") or "Actualizar componente afectado."),
+                "owner": "AppSec / DevOps",
+                "eta": "7-15 dias",
+            }
+        )
+    for header in findings["missing_headers"][:4]:
+        rows.append(
+            {
+                "priority": str(header.get("severity") or "Media"),
+                "finding": f"Header {header.get('header', 'seguridad')}",
+                "action": "Aplicar header recomendado y validar comportamiento.",
+                "owner": "Web Platform",
+                "eta": "3-7 dias",
+            }
+        )
+    if not rows:
+        rows.append(
+            {
+                "priority": "Baja",
+                "finding": "Sin hallazgos criticos",
+                "action": "Mantener monitoreo y ejecutar revalidacion periodica.",
+                "owner": "SOC",
+                "eta": "Continuo",
+            }
+        )
+    return rows[:8]
 
 
 def masked_api_key(api_key: str | None) -> str:

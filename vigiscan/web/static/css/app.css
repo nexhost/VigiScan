@@ -3008,3 +3008,37 @@ body.cyber-body .cyber-table td {
   --uptime-text: #0f172a;
   --uptime-muted: #64748b;
 }
+
+.language-form {
+  margin: 0;
+}
+
+.language-select {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  min-width: 128px;
+}
+
+body.cyber-body .cve-detail-card,
+body.cyber-body .cve-card {
+  background: #f1f7ff;
+  border: 1px solid #d7e3f4;
+  color: #0f172a;
+}
+
+body.cyber-body .cve-detail-grid div {
+  background: #ffffff;
+  border-color: #d7e3f4;
+  color: #0f172a;
+}
+
+body.cyber-body .cve-detail-card p,
+body.cyber-body .cve-detail-card strong,
+body.cyber-body .cve-detail-card h3 {
+  color: #0f172a;
+}
+
+body.cyber-body .cve-reference-list a {
+  color: #0ea5e9;
+}

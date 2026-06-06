@@ -14,5 +14,8 @@
 - Dashboard SaaS claro con tarjetas ejecutivas, secciones de riesgo, OWASP, CVE, uptime e inteligencia.
 - Infrastructure Monitor con metricas psutil y APIs JSON.
 - Uptime Monitor ampliado con contexto de aplicacion, ambiente, criticidad, responsable y acciones CRUD.
+- Selector multiidioma ES/EN con preferencia por usuario.
+- Reportes ejecutivos PDF opcionales con WeasyPrint, plantilla dedicada y fallback claro.
+- Paleta clara para CVE/reportes y roadmap de integraciones defensivas.
 - Reportes ejecutivos con contexto regional.
 - Documentacion Linux y guias en `docs/`.

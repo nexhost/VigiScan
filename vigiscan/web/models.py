@@ -23,6 +23,11 @@ class User(UserMixin, db.Model):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    language_preference: Mapped[str] = mapped_column(
+        String(8),
+        default="es",
+        nullable=False,
+    )
     virustotal_api_key_encrypted: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,

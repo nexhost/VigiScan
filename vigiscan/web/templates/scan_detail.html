@@ -10,8 +10,10 @@
     <p class="text-break">{{ scan.target_url }}</p>
   </div>
   <div class="hero-actions">
-    <a class="btn btn-ghost" href="{{ url_for('main.scan_download_html', scan_id=scan.id) }}">HTML</a>
-    <a class="btn btn-ghost" href="{{ url_for('main.scan_download_json', scan_id=scan.id) }}">JSON</a>
+    <a class="btn btn-cyber" href="{{ url_for('main.reports') }}">{{ t("view_report") }}</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.scan_download_html', scan_id=scan.id) }}">{{ t("download_html") }}</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.scan_download_json', scan_id=scan.id) }}">{{ t("download_json") }}</a>
+    <a class="btn btn-glow pdf-download-btn" href="{{ url_for('main.scan_download_pdf', scan_id=scan.id) }}" data-loading-text="{{ t('generating') }}">{{ t("download_pdf") }}</a>
     <a class="btn btn-ghost" href="{{ url_for('main.scan_download_csv', scan_id=scan.id) }}">CSV</a>
     <a class="btn btn-cyber" href="{{ url_for('main.dashboard') }}">Volver</a>
   </div>

@@ -252,6 +252,8 @@ def render_html(report: ReportDocument) -> str:
     owasp_html = _render_html_owasp(report.get("owasp_findings"))
     alerts_html = _render_html_alerts(report["modules"].get("passive_scan"))
     charts_html = _render_html_report_charts(report)
+    remediation_html = _render_html_remediation(report)
+    conclusion_html = _render_html_conclusion(report)
     chart_data_json = json.dumps(_report_chart_data(report), ensure_ascii=False)
 
     return f"""<!doctype html>
@@ -263,15 +265,18 @@ def render_html(report: ReportDocument) -> str:
   <style>
     :root {{
       color-scheme: light;
-      --bg: #f6f7f9;
+      --bg: #f4f7fa;
       --panel: #ffffff;
-      --ink: #18202a;
-      --muted: #607080;
-      --line: #d8dee6;
-      --accent: #0f766e;
-      --high: #b42318;
-      --medium: #b54708;
-      --low: #047857;
+      --panel-soft: #f8fbfd;
+      --cve-panel: #f1f7ff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #d7e3f4;
+      --accent: #0ea5e9;
+      --cyan: #06b6d4;
+      --high: #dc2626;
+      --medium: #d97706;
+      --low: #16a34a;
     }}
     * {{ box-sizing: border-box; }}
     body {{
@@ -380,7 +385,7 @@ def render_html(report: ReportDocument) -> str:
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 14px;
-      background: #fbfcfe;
+      background: var(--cve-panel);
     }}
     .cve-card h3 {{
       margin: 0;
@@ -428,6 +433,7 @@ def render_html(report: ReportDocument) -> str:
     .report-chart-card {{
       border: 1px solid var(--line);
       border-radius: 8px;
+      background: var(--panel-soft);
       min-height: 280px;
       padding: 14px;
     }}
@@ -490,6 +496,8 @@ def render_html(report: ReportDocument) -> str:
     {owasp_html}
     {alerts_html}
     {modules_html}
+    {remediation_html}
+    {conclusion_html}
     <section>
       <h2>Exportacion JSON</h2>
       <p>El mismo reporte puede descargarse en JSON desde VigiScan Web para auditoria y trazabilidad.</p>
@@ -815,6 +823,78 @@ def _render_html_alerts(passive_scan: Any) -> str:
         ),
     )
     return f"<section><h2>Hallazgos por severidad</h2>{rows}</section>"
+
+
+def _render_html_remediation(report: ReportDocument) -> str:
+    rows: list[str] = []
+    modules = report.get("modules", {})
+    headers = modules.get("headers") if isinstance(modules, dict) else None
+    if isinstance(headers, dict):
+        for item in _as_list(headers.get("findings"))[:4]:
+            if not isinstance(item, dict) or item.get("status") == "Presente":
+                continue
+            rows.append(
+                "<tr>"
+                f"<td>{escape(str(item.get('severity') or 'Media'))}</td>"
+                f"<td>Header {escape(str(item.get('header') or 'seguridad'))}</td>"
+                "<td>Aplicar header recomendado y validar compatibilidad.</td>"
+                "<td>Web Platform</td>"
+                "<td>3-7 dias</td>"
+                "</tr>"
+            )
+    cve_report = modules.get("cve_checker") if isinstance(modules, dict) else None
+    if isinstance(cve_report, dict):
+        for item in _as_list(cve_report.get("matches"))[:4]:
+            if not isinstance(item, dict):
+                continue
+            cve_id = item.get("cve_id") or item.get("cve") or "CVE"
+            rows.append(
+                "<tr>"
+                f"<td>{escape(str(item.get('severity') or 'Alta'))}</td>"
+                f"<td>{escape(str(cve_id))}</td>"
+                f"<td>{escape(str(item.get('recommendation') or 'Actualizar componente afectado.'))}</td>"
+                "<td>AppSec / DevOps</td>"
+                "<td>7-15 dias</td>"
+                "</tr>"
+            )
+    if not rows:
+        rows.append(
+            "<tr><td>Baja</td><td>Sin hallazgos criticos</td>"
+            "<td>Mantener monitoreo y revalidacion periodica.</td><td>SOC</td><td>Continuo</td></tr>"
+        )
+    return (
+        "<section><h2>Plan de Remediacion</h2>"
+        "<table class=\"remediation-table\"><thead><tr><th>Prioridad</th><th>Hallazgo</th>"
+        "<th>Accion recomendada</th><th>Responsable sugerido</th><th>Tiempo estimado</th></tr></thead>"
+        f"<tbody>{''.join(rows[:8])}</tbody></table></section>"
+    )
+
+
+def _render_html_conclusion(report: ReportDocument) -> str:
+    score = int(report["risk"]["score"])
+    level = report["risk"]["level"]
+    if level == "Alto" or score >= 70:
+        conclusion = (
+            "El objetivo presenta exposicion relevante y requiere remediacion "
+            "prioritaria con validacion posterior."
+        )
+    elif level == "Medio" or score >= 35:
+        conclusion = (
+            "El objetivo presenta riesgos gestionables que deben tratarse dentro "
+            "del ciclo de mejora continua."
+        )
+    else:
+        conclusion = (
+            "El objetivo no presenta exposicion alta en los controles evaluados; "
+            "se recomienda mantener monitoreo preventivo."
+        )
+    return (
+        "<section class=\"conclusion-card\"><h2>Conclusion Ejecutiva</h2>"
+        f"<p>{escape(conclusion)}</p>"
+        f"<p><strong>Riesgo residual:</strong> {escape(level)}</p>"
+        "<p><strong>Proximos pasos:</strong> priorizar remediaciones, validar cambios "
+        "y ejecutar un nuevo escaneo de control.</p></section>"
+    )
 
 
 def _render_html_report_charts(report: ReportDocument) -> str:

@@ -136,6 +136,9 @@ def test_save_reports_writes_txt_json_and_html(tmp_path):
     assert "Clasificacion OWASP Top 10 2025" in html
     assert "A03: Software Supply Chain Failures" in html
     assert "Desarrollado por Kendry Rosario" in html
+    assert "Plan de Remediacion" in html
+    assert "Conclusion Ejecutiva" in html
+    assert "Riesgo residual" in html
     assert "Exportacion JSON" in html
 
 

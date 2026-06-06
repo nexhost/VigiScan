@@ -22,6 +22,12 @@ Install the project in editable mode during development:
 python -m pip install -e .
 ```
 
+Optional PDF support for executive reports:
+
+```bash
+python -m pip install -e ".[pdf]"
+```
+
 ## Instalacion en Linux Ubuntu 24.04 / 26.04
 
 1. Actualizar sistema:
@@ -108,6 +114,7 @@ python -m pytest
 - `vigiscan command not found`: activa `.venv` o reinstala con `pip install -e .`.
 - Puerto `5000` ocupado: usa `VIGISCAN_WEB_PORT=5001 vigiscan-web`.
 - SQLite bloqueada: cierra otros procesos del dashboard y reintenta.
+- Error PDF / WeasyPrint: instala `pip install -e ".[pdf]"` dentro del entorno virtual. En Linux instala tambien dependencias del sistema si WeasyPrint lo solicita.
 - `git pull` con cambios locales: revisa `git status`, guarda o commitea antes de actualizar.
 - Permisos en Linux: evita `sudo pip`; usa `.venv`.
 
@@ -155,6 +162,13 @@ Override the initial account and server settings with environment variables:
 Dashboard scans run the same VigiScan engine used by the CLI. Each scan stores
 the target URL, score, risk level, timestamp, generated HTML report path, and
 full normalized report data in SQLite.
+
+The web UI starts in Spanish by default and includes a header language selector
+for Spanish/English. Authenticated users keep their selected language in their
+profile and session.
+
+Reports can be downloaded as HTML, JSON and, when the optional PDF backend is
+installed, as executive PDF files under `reports/pdf/`.
 
 The scanner provides a normalized structure with:
 
@@ -213,6 +227,12 @@ Additional defensive modules include:
 - API security checks for exposed Swagger/OpenAPI/GraphQL, CORS and methods.
 - Secret scanner with masked evidence.
 - Dependency scanner for local manifests.
+
+## Roadmap de Integraciones
+
+Future defensive integrations prepared for planning include Wazuh, OpenCTI,
+MISP, Shodan, AbuseIPDB, HaveIBeenPwned, SecurityTrails, Censys, Nuclei
+templates, Semgrep, Gitleaks, Trivy, Grype and OSV.
 
 See `docs/` for complete Linux, usage, dashboard, development and security
 guides.
