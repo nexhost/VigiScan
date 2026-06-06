@@ -1,50 +1,50 @@
 {% extends "base.html" %}
 
-{% block title %}Reports - VigiScan{% endblock %}
+{% block title %}Reportes - VigiScan{% endblock %}
 
 {% block content %}
 <section class="hero-panel glass-panel animate-in">
   <div>
     <span class="eyebrow">Evidence archive</span>
-    <h1>Reports</h1>
-    <p>Assessment history, generated files and risk posture.</p>
+    <h1>Reportes</h1>
+    <p>Historial de evaluaciones, archivos generados y postura de riesgo.</p>
   </div>
-  <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">New scan</a>
+  <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">Nuevo escaneo</a>
 </section>
 
 <section class="glass-panel animate-in delay-1">
   <div class="panel-heading">
-    <span>Evidence archive</span>
-    <small>{{ scans|length }} records</small>
+    <span>Archivo de evidencias</span>
+    <small>{{ scans|length }} registros</small>
   </div>
   <form class="filter-bar" method="get">
-    <label class="form-label mb-0" for="reportsOwaspFilter">Filter by OWASP</label>
+    <label class="form-label mb-0" for="reportsOwaspFilter">Filtrar por OWASP</label>
     <select class="form-select cyber-input" id="reportsOwaspFilter" name="owasp" onchange="this.form.submit()">
-      <option value="">All categories</option>
+      <option value="">Todas las categorias</option>
       {% for option in owasp_filters %}
       <option value="{{ option.id }}" {% if selected_owasp == option.id %}selected{% endif %}>{{ option.label }}</option>
       {% endfor %}
     </select>
     {% if selected_owasp %}
-    <a class="btn btn-sm btn-ghost" href="{{ url_for('main.reports') }}">Clear</a>
+    <a class="btn btn-sm btn-ghost" href="{{ url_for('main.reports') }}">Limpiar</a>
     {% endif %}
   </form>
   <div class="table-responsive cyber-table-wrap">
     <table class="table cyber-table align-middle mb-0">
       <thead>
         <tr>
-          <th>Scan</th>
-          <th>Target</th>
+          <th>Escaneo</th>
+          <th>Objetivo</th>
           <th>Asset</th>
-          <th>Status</th>
+          <th>Estado</th>
           <th>Score</th>
-          <th>Risk</th>
+          <th>Riesgo</th>
           <th>OWASP</th>
-          <th>Local CVEs</th>
-          <th>Screenshot</th>
-          <th>File</th>
-          <th>Date</th>
-          <th class="text-end">Actions</th>
+          <th>CVE locales</th>
+          <th>Captura</th>
+          <th>Archivo</th>
+          <th>Fecha</th>
+          <th class="text-end">Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -94,23 +94,23 @@
             {% if screenshot.ok %}
             <img class="report-screenshot-thumb" src="{{ url_for('main.scan_screenshot', scan_id=scan.id) }}" alt="Captura de {{ scan.target_url }}">
             {% else %}
-            <span class="text-secondary">{{ screenshot.message or "screenshot unavailable" }}</span>
+            <span class="text-secondary">{{ screenshot.message or "captura no disponible" }}</span>
             {% endif %}
           </td>
           <td class="text-break">{{ scan.report_path or "-" }}</td>
           <td>{{ scan.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
           <td>
             <div class="reports-action-grid">
-              <a class="btn btn-sm btn-cyber" href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">View</a>
+              <a class="btn btn-sm btn-cyber" href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">Detalle</a>
               <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_html', scan_id=scan.id) }}">HTML</a>
               <a class="btn btn-sm btn-ghost" href="{{ url_for('main.scan_download_json', scan_id=scan.id) }}">JSON</a>
-              <a class="btn btn-sm btn-glow pdf-download-btn" href="{{ url_for('main.scan_download_pdf', scan_id=scan.id) }}" data-loading-text="{{ t('generating') }}">PDF report</a>
+              <a class="btn btn-sm btn-glow pdf-download-btn" href="{{ url_for('main.scan_download_pdf', scan_id=scan.id) }}" data-loading-text="{{ t('generating') }}">PDF</a>
             </div>
           </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="12" class="text-secondary">No reports available.</td>
+          <td colspan="12" class="text-secondary">Sin reportes disponibles.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -120,8 +120,8 @@
 
 <section class="glass-panel animate-in delay-2">
   <div class="panel-heading">
-    <span>CVE details by report</span>
-    <small>Local JSON database</small>
+    <span>Detalle CVE por reporte</span>
+    <small>Base local JSON</small>
   </div>
   <div class="cve-stack">
     {% set cve_state = namespace(found=false) %}

@@ -24,7 +24,7 @@
           <img class="brand-logo" src="{{ url_for('static', filename='img/favicon.svg') }}" alt="VigiScan">
           <span class="brand-copy">
             <strong>VigiScan</strong>
-            <small>Security Console</small>
+            <small>Plataforma SOC</small>
           </span>
         </a>
         <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Colapsar menu" title="Colapsar menu">
@@ -81,6 +81,14 @@
             <span class="nav-icon">VT</span>
             <span class="nav-label">{{ t("threat_intelligence") }} / {{ t("virustotal") }}</span>
           </a>
+          <a class="{% if request.endpoint == 'main.reports' %}active{% endif %}" href="{{ url_for('main.reports') }}" title="Vulnerabilidades">
+            <span class="nav-icon">CV</span>
+            <span class="nav-label">Vulnerabilidades</span>
+          </a>
+          <a class="{% if request.endpoint == 'main.threat_map' %}active{% endif %}" href="{{ url_for('main.threat_map') }}" title="Mapa de ciberamenazas">
+            <span class="nav-icon">TM</span>
+            <span class="nav-label">Mapa de ciberamenazas</span>
+          </a>
         </div>
         <div class="nav-section">
           <span class="nav-section-title">Sistema</span>
@@ -88,11 +96,22 @@
             <span class="nav-icon">CF</span>
             <span class="nav-label">{{ t("settings") }}</span>
           </a>
+          <a href="{{ url_for('main.settings') }}#idioma" title="{{ t('language') }}">
+            <span class="nav-icon">ES</span>
+            <span class="nav-label">{{ t("language") }}</span>
+          </a>
+          <form class="sidebar-logout-form" method="post" action="{{ url_for('main.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="sidebar-logout-button" type="submit" title="{{ t('logout') }}">
+              <span class="nav-icon">SL</span>
+              <span class="nav-label">{{ t("logout") }}</span>
+            </button>
+          </form>
         </div>
       </nav>
       <div class="sidebar-status">
-        <span class="pulse-dot"></span>
-        <span class="nav-label">Sensor web activo</span>
+        <div><span class="pulse-dot"></span><span class="nav-label">Sensor web activo</span></div>
+        <small class="nav-label">Version VigiScan</small>
       </div>
     </aside>
 
@@ -101,7 +120,7 @@
         <div class="topbar-brand">
           <img src="{{ url_for('static', filename='img/favicon.svg') }}" alt="" aria-hidden="true">
           <div>
-            <span class="eyebrow">VigiScan WAF</span>
+            <span class="eyebrow">VigiScan</span>
             <div class="topbar-title">{{ self.title() }}</div>
           </div>
         </div>

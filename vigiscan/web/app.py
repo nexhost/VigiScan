@@ -120,7 +120,7 @@ def _ensure_user_profile_columns() -> None:
         "display_name": "ALTER TABLE users ADD COLUMN display_name VARCHAR(120)",
         "language_preference": (
             "ALTER TABLE users ADD COLUMN language_preference "
-            "VARCHAR(8) DEFAULT 'en' NOT NULL"
+            "VARCHAR(8) DEFAULT 'es' NOT NULL"
         ),
         "last_login_at": "ALTER TABLE users ADD COLUMN last_login_at DATETIME",
         "virustotal_api_key_encrypted": (
@@ -172,6 +172,7 @@ def _ensure_asset_columns() -> None:
         "technology": "ALTER TABLE assets ADD COLUMN technology VARCHAR(160)",
         "environment": "ALTER TABLE assets ADD COLUMN environment VARCHAR(80)",
         "notes": "ALTER TABLE assets ADD COLUMN notes TEXT",
+        "infrastructure_host_id": "ALTER TABLE assets ADD COLUMN infrastructure_host_id INTEGER",
     }
     for column, statement in migrations.items():
         if column not in existing:
@@ -201,6 +202,9 @@ def _ensure_monitored_site_columns() -> None:
             "INTEGER DEFAULT 5 NOT NULL"
         ),
         "notes": "ALTER TABLE monitored_sites ADD COLUMN notes TEXT",
+        "infrastructure_host_id": (
+            "ALTER TABLE monitored_sites ADD COLUMN infrastructure_host_id INTEGER"
+        ),
     }
     for column, statement in migrations.items():
         if column not in existing:
@@ -210,6 +214,22 @@ def _ensure_monitored_site_columns() -> None:
 
 def _ensure_default_system_settings() -> None:
     """Ensure a singleton regional settings row exists."""
+    inspector = inspect(db.engine)
+    if "system_settings" in inspector.get_table_names():
+        existing = {column["name"] for column in inspector.get_columns("system_settings")}
+        migrations = {
+            "threat_map_url": (
+                "ALTER TABLE system_settings ADD COLUMN threat_map_url VARCHAR(2048)"
+            ),
+            "threat_map_external_enabled": (
+                "ALTER TABLE system_settings ADD COLUMN "
+                "threat_map_external_enabled BOOLEAN DEFAULT 0 NOT NULL"
+            ),
+        }
+        for column, statement in migrations.items():
+            if column not in existing:
+                db.session.execute(text(statement))
+        db.session.commit()
     if SystemSettings.query.first() is None:
         db.session.add(SystemSettings())
         db.session.commit()

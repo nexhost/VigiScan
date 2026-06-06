@@ -40,6 +40,7 @@ dev = [
     "ruff>=0.4",
 ]
 pdf = [
+    "reportlab>=4.2",
     "weasyprint>=62.0",
 ]
 dns = [

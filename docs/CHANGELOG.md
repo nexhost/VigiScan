@@ -9,13 +9,14 @@
 - Secret Scanner defensivo con evidencia enmascarada.
 - Dependency Scanner local.
 - TLS Analyzer.
-- WAF Detection pasivo.
+- Deteccion pasiva de proteccion perimetral.
 - API Security checks pasivos.
-- Dashboard SaaS claro con tarjetas ejecutivas, secciones de riesgo, OWASP, CVE, uptime e inteligencia.
-- Infrastructure Monitor con metricas psutil y APIs JSON.
+- Dashboard dark SOC con tarjetas ejecutivas, secciones de riesgo, OWASP, CVE, uptime e inteligencia.
+- Infrastructure Monitor con metricas psutil, servidores remotos y APIs JSON.
+- Threat Map con fuente externa configurable y visualizacion demostrativa local.
 - Uptime Monitor ampliado con contexto de aplicacion, ambiente, criticidad, responsable y acciones CRUD.
 - Selector multiidioma ES/EN con preferencia por usuario.
-- Reportes ejecutivos PDF opcionales con WeasyPrint, plantilla dedicada y fallback claro.
-- Paleta clara para CVE/reportes y roadmap de integraciones defensivas.
+- Reportes ejecutivos PDF opcionales con WeasyPrint y respaldo ReportLab.
+- Paleta dark SOC con contraste alto para CVE, reportes, formularios y tablas.
 - Reportes ejecutivos con contexto regional.
 - Documentacion Linux y guias en `docs/`.

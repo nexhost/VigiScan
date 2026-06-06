@@ -76,6 +76,10 @@
           {{ form.environment(class="form-select cyber-input") }}
         </div>
         <div class="mb-3">
+          {{ form.infrastructure_host_id.label(class="form-label") }}
+          {{ form.infrastructure_host_id(class="form-select cyber-input") }}
+        </div>
+        <div class="mb-3">
           {{ form.technology.label(class="form-label") }}
           {{ form.technology(class="form-control cyber-input", placeholder="Nginx, Flask, WordPress") }}
         </div>

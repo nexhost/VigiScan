@@ -3,7 +3,7 @@
 VigiScan is a defensive web security monitoring and vulnerability assessment
 platform for analysts. It combines a Python CLI, Flask dashboard, executive
 reports, uptime monitoring, asset inventory, IOC tracking, VirusTotal
-reputation, OWASP mapping, local CVE enrichment, passive API/WAF/TLS checks,
+reputation, OWASP mapping, local CVE enrichment, passive API, edge protection and TLS checks,
 dependency review, and masked secret detection.
 
 VigiScan helps detect multiple classes of web risk, but no tool can guarantee
@@ -169,6 +169,16 @@ profile and session.
 
 Reports can be downloaded as HTML, JSON and, when the optional PDF backend is
 installed, as executive PDF files under `reports/pdf/`.
+If WeasyPrint cannot render in the current system, VigiScan falls back to
+ReportLab when the `.[pdf]` extra is installed.
+
+Threat Map is available at `/threat-map`. It can embed a configured external
+source from Settings, and it shows a clearly labeled local demonstration view
+when the external source is disabled or unavailable.
+
+Remote infrastructure monitoring is available at `/infrastructure`. Register
+servers as `Local`, `Agent/API` or `Manual`, then associate uptime applications
+and assets with the server that hosts them.
 
 The scanner provides a normalized structure with:
 
@@ -223,7 +233,7 @@ Additional defensive modules include:
 - Regional settings for country, timezone, currency and organization context.
 - VirusTotal integration with encrypted key storage and local cache.
 - TLS analyzer for certificate health and HTTP-to-HTTPS redirect checks.
-- WAF detection using passive headers/cookies.
+- Edge protection detection using passive headers/cookies.
 - API security checks for exposed Swagger/OpenAPI/GraphQL, CORS and methods.
 - Secret scanner with masked evidence.
 - Dependency scanner for local manifests.

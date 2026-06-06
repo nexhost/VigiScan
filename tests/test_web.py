@@ -8,7 +8,15 @@ from vigiscan.modules.pdf_report import PDFReportUnavailable
 from vigiscan.modules.dns_lookup import DomainLookupResult
 from vigiscan.modules.screenshot import ScreenshotResult
 from vigiscan.web.app import create_app
-from vigiscan.web.models import Asset, InfrastructureMetric, MonitoredSite, Scan, User, db
+from vigiscan.web.models import (
+    Asset,
+    InfrastructureHost,
+    InfrastructureMetric,
+    MonitoredSite,
+    Scan,
+    User,
+    db,
+)
 
 
 @pytest.fixture()
@@ -172,16 +180,17 @@ def test_admin_can_login_and_view_dashboard(client):
     response = login(client)
 
     assert response.status_code == 200
-    assert b"Dashboard" in response.data
-    assert b"New scan" in response.data
-    assert b"Reports" in response.data
-    assert b"Uptime Monitor" in response.data
-    assert b"Infrastructure Monitor" in response.data
-    assert b"Assets" in response.data
+    assert b"Panel de control" in response.data
+    assert b"Nuevo escaneo" in response.data
+    assert b"Reportes" in response.data
+    assert b"Monitor de disponibilidad" in response.data
+    assert b"Monitor de infraestructura" in response.data
+    assert b"Activos" in response.data
     assert b"IOC Center" in response.data
-    assert b"Threat Intelligence / VirusTotal" in response.data
+    assert b"Inteligencia de amenazas / VirusTotal" in response.data
     assert b"OWASP Top 10" in response.data
-    assert b"Settings" in response.data
+    assert b"Configuracion" in response.data
+    assert b"Mapa de ciberamenazas" in response.data
 
 
 def test_user_can_switch_language_to_english(client, app):
@@ -211,10 +220,12 @@ def test_requested_web_routes_are_available(client):
         "/infrastructure",
         "/assets",
         "/dns",
+        "/threat-map",
         "/iocs",
         "/threat-intel/virustotal",
         "/owasp",
         "/settings",
+        "/threat-map",
     ]
 
     for path in expected_ok:
@@ -254,9 +265,53 @@ def test_dns_domain_lookup_page_returns_records(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    assert b"DNS / Domains" in response.data
+    assert b"DNS / Dominios" in response.data
     assert b"93.184.216.34" in response.data
     assert b"mail.example.com" in response.data
+
+
+def test_threat_map_page_loads_demo_view(client):
+    login(client)
+    response = client.get("/threat-map")
+
+    assert response.status_code == 200
+    assert b"Mapa de ciberamenazas" in response.data
+    assert b"Visualizacion demostrativa" in response.data
+
+
+def test_infrastructure_host_crud_page(client, app):
+    login(client)
+    response = client.post(
+        "/infrastructure",
+        data={
+            "name": "Servidor Web 01",
+            "ip_address": "203.0.113.10",
+            "hostname": "web01.example.com",
+            "operating_system": "Ubuntu",
+            "environment": "Produccion",
+            "responsible": "SOC",
+            "criticality": "Alta",
+            "monitor_method": "Manual",
+            "api_url": "",
+            "api_token": "",
+            "notes": "Pendiente de agente",
+            "active": "y",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Servidor Web 01" in response.data
+    with app.app_context():
+        host = InfrastructureHost.query.filter_by(name="Servidor Web 01").one()
+        assert host.monitor_method == "Manual"
+
+
+def test_no_visible_waf_branding(client):
+    response = login(client)
+
+    assert response.status_code == 200
+    assert b"".join([b"W", b"A", b"F"]) not in response.data
 
 
 def test_dashboard_uptime_and_infrastructure_apis_return_json(client, app, monkeypatch):
@@ -408,12 +463,12 @@ def test_dashboard_shows_soc_summary_charts_and_actions(client, monkeypatch):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert b"VigiScan Operations Center" in response.data
+    assert b"Centro de Operaciones VigiScan" in response.data
     assert b"Total Assets" in response.data
     assert b"Total IOCs" in response.data
     assert b"VirusTotal Enabled" in response.data
     assert b"Uptime Sites" in response.data
-    assert b"WAF Detected" in response.data
+    assert b"Proteccion perimetral" in response.data
     assert b"SSL Health" in response.data
     assert b"OWASP Findings" in response.data
     assert b"CVE Count" in response.data
@@ -424,7 +479,7 @@ def test_dashboard_shows_soc_summary_charts_and_actions(client, monkeypatch):
     assert b"owaspFocusChart" in response.data
     assert b"cveFocusChart" in response.data
     assert b"riskFocusChart" in response.data
-    assert b"View" in response.data
+    assert b"Ver detalle" in response.data
     assert b"HTML" in response.data
     assert b"JSON" in response.data
     assert b"PDF" in response.data
@@ -438,8 +493,8 @@ def test_reports_show_detailed_cve_metadata(client, monkeypatch):
     response = client.get("/reports")
 
     assert response.status_code == 200
-    assert b"Local CVEs" in response.data
-    assert b"Screenshot" in response.data
+    assert b"CVE locales" in response.data
+    assert b"Captura" in response.data
     assert b"OWASP" in response.data
     assert b"CVE-2021-41773" in response.data
     assert b"Apache HTTP Server 2.4.49" in response.data
@@ -519,8 +574,8 @@ def test_scan_pdf_route_generates_file_when_backend_available(client, app, monke
     create_completed_scan(client, monkeypatch)
 
     def fake_generate_pdf(html, output_path, *, base_url=None):
-        assert "Executive Web Security Report" in html
-        assert "Developed by Kendry Rosario" in html
+        assert "Informe Ejecutivo de Seguridad Web" in html
+        assert "Desarrollado por Kendry Rosario" in html
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"%PDF-1.4\n%fake\n")

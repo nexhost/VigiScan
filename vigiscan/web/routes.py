@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import requests
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,7 @@ from vigiscan.web.forms import (
     AssetForm,
     DomainLookupForm,
     IndicatorForm,
+    InfrastructureHostForm,
     LoginForm,
     MonitoredSiteForm,
     PasswordChangeForm,
@@ -70,9 +72,11 @@ from vigiscan.web.forms import (
 )
 from vigiscan.web.models import (
     Asset,
+    InfrastructureHost,
     InfrastructureMetric,
     Indicator,
     MonitoredSite,
+    RemoteInfrastructureMetric,
     Scan,
     SystemSettings,
     UptimeCheck,
@@ -244,6 +248,10 @@ def settings():
         regional_form.organization_criticality.data = (
             settings_record.organization_criticality
         )
+        regional_form.threat_map_url.data = settings_record.threat_map_url or ""
+        regional_form.threat_map_external_enabled.data = bool(
+            settings_record.threat_map_external_enabled
+        )
 
     if profile_form.submit_profile.data and profile_form.validate_on_submit():
         current_user.email = (profile_form.email.data or "").strip() or None
@@ -297,6 +305,12 @@ def settings():
         )
         settings_record.organization_criticality = (
             regional_form.organization_criticality.data
+        )
+        settings_record.threat_map_url = (
+            (regional_form.threat_map_url.data or "").strip() or None
+        )
+        settings_record.threat_map_external_enabled = bool(
+            regional_form.threat_map_external_enabled.data
         )
         settings_record.updated_at = datetime.now(UTC)
         db.session.commit()
@@ -503,6 +517,7 @@ def owasp():
 @login_required
 def uptime():
     form = MonitoredSiteForm()
+    configure_monitored_site_form(form)
     if form.validate_on_submit():
         site = MonitoredSite()
         populate_monitored_site_from_form(site, form)
@@ -542,6 +557,9 @@ def uptime_check(site_id: int):
 def uptime_edit(site_id: int):
     site = db.get_or_404(MonitoredSite, site_id)
     form = MonitoredSiteForm(obj=site)
+    configure_monitored_site_form(form)
+    if request.method == "GET":
+        form.infrastructure_host_id.data = site.infrastructure_host_id or 0
     if form.validate_on_submit():
         populate_monitored_site_from_form(site, form)
         db.session.commit()
@@ -580,18 +598,87 @@ def uptime_delete(site_id: int):
     return redirect(url_for("main.uptime"))
 
 
-@bp.get("/infrastructure")
+@bp.route("/infrastructure", methods=("GET", "POST"))
 @login_required
 def infrastructure():
+    form = InfrastructureHostForm()
+    if form.validate_on_submit():
+        host = InfrastructureHost()
+        populate_infrastructure_host_from_form(host, form)
+        db.session.add(host)
+        db.session.commit()
+        flash("Servidor registrado en Infrastructure Monitor.", "success")
+        return redirect(url_for("main.infrastructure"))
+
     metric = capture_infrastructure_metric()
     history = InfrastructureMetric.query.order_by(
         InfrastructureMetric.created_at.desc()
     ).limit(50).all()
     history.reverse()
+    hosts = InfrastructureHost.query.order_by(InfrastructureHost.created_at.desc()).all()
     return render_template(
         "infrastructure.html",
+        form=form,
         metric=metric_to_dict(metric),
         history=metrics_history_to_chart(history),
+        hosts=hosts,
+        host_rows=[infrastructure_host_row(host) for host in hosts],
+    )
+
+
+@bp.route("/infrastructure/<int:host_id>", methods=("GET", "POST"))
+@login_required
+def infrastructure_detail(host_id: int):
+    host = db.get_or_404(InfrastructureHost, host_id)
+    form = InfrastructureHostForm(obj=host)
+    if request.method == "GET":
+        form.api_token.data = ""
+    if form.validate_on_submit():
+        populate_infrastructure_host_from_form(host, form)
+        db.session.commit()
+        flash("Servidor actualizado.", "success")
+        return redirect(url_for("main.infrastructure_detail", host_id=host.id))
+    metrics = list(host.metrics)[-50:]
+    return render_template(
+        "infrastructure_detail.html",
+        host=host,
+        form=form,
+        metrics=metrics,
+        chart=remote_metrics_history_to_chart(metrics),
+        related_sites=host.monitored_sites,
+        related_assets=host.assets,
+    )
+
+
+@bp.post("/infrastructure/<int:host_id>/check")
+@login_required
+def infrastructure_check(host_id: int):
+    host = db.get_or_404(InfrastructureHost, host_id)
+    collect_remote_infrastructure_metric(host)
+    db.session.commit()
+    flash("Chequeo de infraestructura ejecutado.", "success")
+    return redirect(url_for("main.infrastructure_detail", host_id=host.id))
+
+
+@bp.post("/infrastructure/<int:host_id>/delete")
+@login_required
+def infrastructure_delete(host_id: int):
+    host = db.get_or_404(InfrastructureHost, host_id)
+    db.session.delete(host)
+    db.session.commit()
+    flash("Servidor eliminado.", "success")
+    return redirect(url_for("main.infrastructure"))
+
+
+@bp.get("/threat-map")
+@login_required
+def threat_map():
+    settings_record = get_system_settings()
+    return render_template(
+        "threat_map.html",
+        threat_map_url=settings_record.threat_map_url,
+        external_enabled=bool(settings_record.threat_map_external_enabled),
+        events=demo_threat_events(),
     )
 
 
@@ -687,6 +774,7 @@ def api_infrastructure_history():
 @login_required
 def assets():
     form = AssetForm()
+    configure_asset_form(form)
     if form.validate_on_submit():
         asset = Asset()
         populate_asset_from_form(asset, form)
@@ -705,6 +793,7 @@ def assets():
 @login_required
 def asset_new():
     form = AssetForm()
+    configure_asset_form(form)
     if form.validate_on_submit():
         asset = Asset()
         populate_asset_from_form(asset, form)
@@ -742,8 +831,10 @@ def asset_detail(asset_id: int):
 def asset_edit(asset_id: int):
     asset = db.get_or_404(Asset, asset_id)
     form = AssetForm(obj=asset)
+    configure_asset_form(form)
     if request.method == "GET":
         form.ip_address.data = asset.ip_address
+        form.infrastructure_host_id.data = asset.infrastructure_host_id or 0
     if form.validate_on_submit():
         populate_asset_from_form(asset, form)
         db.session.commit()
@@ -978,11 +1069,11 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
     severity_counts = pdf_severity_counts(findings)
     charts = [
         {
-            "title": "Findings by severity",
+            "title": "Hallazgos por severidad",
             "items": chart_items_from_counts(severity_counts),
         },
         {
-            "title": "OWASP Top 10 distribution",
+            "title": "OWASP Top 10",
             "items": chart_items_from_counts(
                 _count_values(
                     item.get("category_id") or item.get("category") or "OWASP"
@@ -991,19 +1082,19 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
             ),
         },
         {
-            "title": "CVE by severity",
+            "title": "CVE por severidad",
             "items": chart_items_from_counts(
                 _count_values(str(cve.get("severity") or "Unknown") for cve in findings["cves"])
             ),
         },
         {
-            "title": "Detected technologies",
+            "title": "Tecnologias detectadas",
             "items": chart_items_from_counts(
                 _count_values(str(tech.get("name") or "Unknown") for tech in findings["technologies"])
             ),
         },
         {
-            "title": "Risk score",
+            "title": "Score de riesgo",
             "items": [
                 {
                     "label": scan.risk_level or report_data["risk"]["level"],
@@ -1013,7 +1104,7 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
             ],
         },
         {
-            "title": "SSL status",
+            "title": "Estado SSL",
             "items": chart_items_from_counts(_count_values([pdf_module_state(scan, "tls_analyzer")])),
         },
     ]
@@ -1022,7 +1113,7 @@ def build_pdf_report_context(scan: Scan) -> dict[str, Any]:
         "scan": scan,
         "report": report_data,
         "findings": findings,
-        "organization": settings_record.organization_name or "Organization not configured",
+        "organization": settings_record.organization_name or "Organizacion no configurada",
         "country": settings_record.country,
         "timezone": settings_record.timezone,
         "generated_local": local_datetime(datetime.now(UTC)),
@@ -1069,7 +1160,7 @@ def chart_items_from_counts(counts: dict[str, int]) -> list[dict[str, Any]]:
         if value
     ]
     if not visible:
-        visible = [{"label": "No data", "value": 0}]
+        visible = [{"label": "Sin datos", "value": 0}]
     max_value = max((item["value"] for item in visible), default=1) or 1
     return [
         {
@@ -1094,12 +1185,12 @@ def pdf_module_state(scan: Scan, module_name: str) -> str:
     modules = report_data.get("modules") if isinstance(report_data, dict) else None
     module = modules.get(module_name) if isinstance(modules, dict) else None
     if not isinstance(module, dict):
-        return "No data"
+        return "Sin datos"
     if module.get("error"):
-        return "Requires review"
+        return "Requiere revision"
     if module.get("detections") or module.get("findings") or module.get("alerts"):
-        return "Findings recorded"
-    return "No relevant findings"
+        return "Hallazgos registrados"
+    return "Sin hallazgos relevantes"
 
 
 def pdf_general_recommendation(scan: Scan, severity_counts: dict[str, int]) -> str:
@@ -1109,19 +1200,19 @@ def pdf_general_recommendation(scan: Scan, severity_counts: dict[str, int]) -> s
         + severity_counts.get("Alto", 0)
     )
     if high_total or scan.risk_level == "Alto":
-        return "Prioritize critical and high remediation before non-urgent functional changes."
+        return "Priorizar remediaciones criticas y altas antes de cambios funcionales no urgentes."
     if scan.risk_level == "Medio":
-        return "Plan remediation in the next operational cycle and validate preventive controls."
-    return "Maintain continuous monitoring, current patching and periodic revalidation."
+        return "Planificar remediacion en el siguiente ciclo operativo y validar controles preventivos."
+    return "Mantener monitoreo continuo, parches al dia y revalidacion periodica."
 
 
 def pdf_executive_conclusion(scan: Scan) -> str:
     score = scan.score if scan.score is not None else 0
     if scan.risk_level == "Alto" or score >= 70:
-        return "The target shows relevant exposure and requires priority remediation with follow-up validation."
+        return "El objetivo presenta exposicion relevante y requiere remediacion prioritaria con validacion posterior."
     if scan.risk_level == "Medio" or score >= 35:
-        return "The target shows manageable risks that should be handled within the continuous improvement cycle."
-    return "The target does not show high exposure in the evaluated controls; continue preventive monitoring."
+        return "El objetivo presenta riesgos gestionables que deben tratarse dentro del ciclo de mejora continua."
+    return "El objetivo no presenta exposicion alta en los controles evaluados, manteniendo monitoreo preventivo."
 
 
 def pdf_remediation_plan(findings: dict[str, list[dict[str, Any]]]) -> list[dict[str, str]]:
@@ -1131,29 +1222,29 @@ def pdf_remediation_plan(findings: dict[str, list[dict[str, Any]]]) -> list[dict
             {
                 "priority": str(cve.get("severity") or "Alta"),
                 "finding": str(cve.get("cve_id") or cve.get("cve") or "CVE"),
-                "action": str(cve.get("recommendation") or "Update the affected component."),
+                "action": str(cve.get("recommendation") or "Actualizar componente afectado."),
                 "owner": "AppSec / DevOps",
-                "eta": "7-15 days",
+                "eta": "7-15 dias",
             }
         )
     for header in findings["missing_headers"][:4]:
         rows.append(
             {
-                "priority": str(header.get("severity") or "Medium"),
-                "finding": f"Header {header.get('header', 'security')}",
-                "action": "Apply the recommended header and validate browser behavior.",
+                "priority": str(header.get("severity") or "Media"),
+                "finding": f"Header {header.get('header', 'seguridad')}",
+                "action": "Aplicar header recomendado y validar comportamiento.",
                 "owner": "Web Platform",
-                "eta": "3-7 days",
+                "eta": "3-7 dias",
             }
         )
     if not rows:
         rows.append(
             {
-                "priority": "Low",
-                "finding": "No critical findings",
-                "action": "Maintain monitoring and run periodic revalidation.",
+                "priority": "Baja",
+                "finding": "Sin hallazgos criticos",
+                "action": "Mantener monitoreo y ejecutar revalidacion periodica.",
                 "owner": "SOC",
-                "eta": "Continuous",
+                "eta": "Continuo",
             }
         )
     return rows[:8]
@@ -1177,7 +1268,137 @@ def populate_monitored_site_from_form(site: MonitoredSite, form: MonitoredSiteFo
     site.criticality = form.criticality.data
     site.monitor_interval_minutes = int(form.monitor_interval_minutes.data or 5)
     site.notes = (form.notes.data or "").strip() or None
+    site.infrastructure_host_id = form.infrastructure_host_id.data or None
     site.active = bool(form.active.data)
+
+
+def configure_monitored_site_form(form: MonitoredSiteForm) -> None:
+    """Populate infrastructure host choices for uptime forms."""
+    form.infrastructure_host_id.choices = infrastructure_host_choices()
+
+
+def configure_asset_form(form: AssetForm) -> None:
+    """Populate infrastructure host choices for asset forms."""
+    form.infrastructure_host_id.choices = infrastructure_host_choices()
+
+
+def infrastructure_host_choices() -> list[tuple[int, str]]:
+    hosts = InfrastructureHost.query.order_by(InfrastructureHost.name.asc()).all()
+    return [(0, "Sin servidor asociado")] + [
+        (host.id, host.name) for host in hosts
+    ]
+
+
+def populate_infrastructure_host_from_form(
+    host: InfrastructureHost,
+    form: InfrastructureHostForm,
+) -> None:
+    """Persist remote infrastructure host metadata from a form."""
+    host.name = form.name.data.strip()
+    host.ip_address = (form.ip_address.data or "").strip() or None
+    host.hostname = (form.hostname.data or "").strip() or None
+    host.operating_system = (form.operating_system.data or "").strip() or None
+    host.environment = form.environment.data
+    host.responsible = (form.responsible.data or "").strip() or None
+    host.criticality = form.criticality.data
+    host.monitor_method = form.monitor_method.data
+    host.api_url = (form.api_url.data or "").strip() or None
+    token = (form.api_token.data or "").strip()
+    if token:
+        host.api_token_encrypted = encrypt_api_key(token, current_app.config["SECRET_KEY"])
+    host.notes = (form.notes.data or "").strip() or None
+    host.active = bool(form.active.data)
+
+
+def infrastructure_host_row(host: InfrastructureHost) -> dict[str, Any]:
+    latest = host.metrics[-1] if host.metrics else None
+    status = latest.status if latest else (
+        "Local" if host.monitor_method == "Local" else "Pendiente de agente"
+    )
+    return {"host": host, "latest": latest, "status": status}
+
+
+def collect_remote_infrastructure_metric(host: InfrastructureHost) -> RemoteInfrastructureMetric:
+    """Collect one metric snapshot for a registered host."""
+    if host.monitor_method == "Local":
+        local = metric_to_dict(capture_infrastructure_metric())
+        metric = RemoteInfrastructureMetric(
+            host_id=host.id,
+            cpu_percent=float(local["cpu_percent"]),
+            memory_percent=float(local["memory_percent"]),
+            disk_percent=float(local["disk_percent"]),
+            net_bytes_sent=0,
+            net_bytes_recv=0,
+            upload_rate=float(local["net_upload_rate"]),
+            download_rate=float(local["net_download_rate"]),
+            active_processes=int(local["active_processes"]),
+            uptime=str(local["server_uptime_label"]),
+            status="Activo",
+        )
+    elif host.monitor_method == "Agent/API" and host.api_url:
+        metric = collect_agent_metric(host)
+    else:
+        metric = RemoteInfrastructureMetric(
+            host_id=host.id,
+            status="Pendiente de agente",
+        )
+    db.session.add(metric)
+    return metric
+
+
+def collect_agent_metric(host: InfrastructureHost) -> RemoteInfrastructureMetric:
+    """Fetch metrics from a remote JSON agent endpoint."""
+    headers = {}
+    token = decrypt_api_key(host.api_token_encrypted, current_app.config["SECRET_KEY"])
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    try:
+        response = requests.get(host.api_url or "", headers=headers, timeout=5)
+        response.raise_for_status()
+        payload = response.json()
+    except Exception as exc:
+        current_app.logger.warning("Remote infrastructure agent failed: %s", exc)
+        return RemoteInfrastructureMetric(
+            host_id=host.id,
+            status="Agente no disponible",
+        )
+    return RemoteInfrastructureMetric(
+        host_id=host.id,
+        cpu_percent=float(payload.get("cpu_percent") or 0),
+        memory_percent=float(payload.get("memory_percent") or 0),
+        disk_percent=float(payload.get("disk_percent") or 0),
+        net_bytes_sent=int(payload.get("net_bytes_sent") or 0),
+        net_bytes_recv=int(payload.get("net_bytes_recv") or 0),
+        upload_rate=float(payload.get("upload_rate") or payload.get("net_upload_rate") or 0),
+        download_rate=float(payload.get("download_rate") or payload.get("net_download_rate") or 0),
+        active_processes=int(payload.get("active_processes") or 0),
+        uptime=str(payload.get("uptime") or "-"),
+        status="Activo",
+    )
+
+
+def remote_metrics_history_to_chart(
+    metrics: list[RemoteInfrastructureMetric],
+) -> dict[str, list[Any]]:
+    return {
+        "labels": [metric.collected_at.strftime("%H:%M") for metric in metrics],
+        "cpu": [metric.cpu_percent for metric in metrics],
+        "memory": [metric.memory_percent for metric in metrics],
+        "disk": [metric.disk_percent for metric in metrics],
+        "network_in": [metric.download_rate for metric in metrics],
+        "network_out": [metric.upload_rate for metric in metrics],
+        "processes": [metric.active_processes for metric in metrics],
+    }
+
+
+def demo_threat_events() -> list[dict[str, str]]:
+    """Return clearly labeled demo events for the local threat map animation."""
+    return [
+        {"origin": "BR", "target": "DO", "type": "Web scan", "time": "10:42", "severity": "Media"},
+        {"origin": "US", "target": "DO", "type": "Credential probe", "time": "10:46", "severity": "Alta"},
+        {"origin": "NL", "target": "DO", "type": "Bot traffic", "time": "10:51", "severity": "Baja"},
+        {"origin": "DE", "target": "DO", "type": "Exploit attempt", "time": "10:58", "severity": "Critica"},
+    ]
 
 
 def capture_infrastructure_metric() -> InfrastructureMetric:
@@ -1259,6 +1480,7 @@ def populate_asset_from_form(asset: Asset, form: AssetForm) -> None:
     asset.status = form.status.data
     asset.technology = (form.technology.data or "").strip() or None
     asset.environment = form.environment.data
+    asset.infrastructure_host_id = form.infrastructure_host_id.data or None
     asset.notes = (form.notes.data or "").strip() or None
 
 
@@ -1902,7 +2124,7 @@ def scan_alerts(scan: Scan) -> list[dict[str, Any]]:
 
 
 def scan_waf_detections(scan: Scan) -> list[dict[str, Any]]:
-    """Return passive WAF detections stored on a scan."""
+    """Return passive edge protection detections stored on a scan."""
     report_data = scan.report_data or {}
     modules = report_data.get("modules") if isinstance(report_data, dict) else None
     if not isinstance(modules, dict):

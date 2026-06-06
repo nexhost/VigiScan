@@ -90,6 +90,7 @@
         <div>{{ form.responsible.label(class="form-label") }}{{ form.responsible(class="form-control cyber-input", placeholder="SOC / DevOps") }}</div>
         <div>{{ form.country.label(class="form-label") }}{{ form.country(class="form-control cyber-input", placeholder="DO") }}</div>
         <div>{{ form.criticality.label(class="form-label") }}{{ form.criticality(class="form-select cyber-input") }}</div>
+        <div>{{ form.infrastructure_host_id.label(class="form-label") }}{{ form.infrastructure_host_id(class="form-select cyber-input") }}</div>
         <div>{{ form.monitor_interval_minutes.label(class="form-label") }}{{ form.monitor_interval_minutes(class="form-control cyber-input", min="1", max="1440") }}</div>
         <div class="uptime-form-wide">{{ form.notes.label(class="form-label") }}{{ form.notes(class="form-control cyber-input", rows="2", placeholder="Notas operativas") }}</div>
         <label class="uptime-active-option">{{ form.active() }}{{ form.active.label.text }}</label>

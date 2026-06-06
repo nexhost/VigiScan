@@ -23,6 +23,12 @@ Para acceso por red:
 VIGISCAN_WEB_HOST=0.0.0.0 VIGISCAN_WEB_PORT=5000 vigiscan-web
 ```
 
+Tambien puedes usar Flask directamente:
+
+```bash
+flask --app vigiscan.web.app run --host=0.0.0.0 --port=5000
+```
+
 Actualizacion:
 
 ```bash
@@ -41,8 +47,16 @@ Solucion rapida:
 - SQLite bloqueada: cierra procesos abiertos.
 - permisos: evita instalar con `sudo pip`.
 - PDF no disponible: instala `pip install -e ".[pdf]"`. Si WeasyPrint solicita librerias del sistema, revisa su mensaje de error e instala los paquetes faltantes desde `apt`.
+- Si WeasyPrint falla, el extra PDF incluye ReportLab como respaldo.
 
 Reportes generados:
 
 - HTML/JSON/TXT: directorio `reports/`.
 - PDF ejecutivo: directorio `reports/pdf/`.
+
+Threat Map e infraestructura remota:
+
+- Configura la URL externa del mapa en `Configuracion`.
+- Registra servidores remotos en `/infrastructure`.
+- Asocia aplicaciones uptime y activos al servidor correspondiente.
+- Para Agent/API, expone un endpoint JSON defensivo con metricas de CPU, RAM, disco, red, uptime y procesos.

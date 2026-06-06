@@ -133,7 +133,7 @@
           <div class="invalid-feedback d-block">{{ error }}</div>
           {% endfor %}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" id="idioma">
           {{ regional_form.language.label(class="form-label") }}
           {{ regional_form.language(class="form-control cyber-input", placeholder="es") }}
         </div>
@@ -156,6 +156,16 @@
         <div class="col-md-6">
           {{ regional_form.organization_criticality.label(class="form-label") }}
           {{ regional_form.organization_criticality(class="form-select cyber-input") }}
+        </div>
+        <div class="col-md-8" id="threat-map-settings">
+          {{ regional_form.threat_map_url.label(class="form-label") }}
+          {{ regional_form.threat_map_url(class="form-control cyber-input", placeholder="https://...") }}
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <label class="scan-option mb-0">
+            {{ regional_form.threat_map_external_enabled() }}
+            {{ regional_form.threat_map_external_enabled.label.text }}
+          </label>
         </div>
       </div>
       <div class="mt-3">

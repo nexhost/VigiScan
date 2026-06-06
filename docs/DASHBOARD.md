@@ -12,7 +12,7 @@ El dashboard inicia en espanol por defecto y muestra:
 - IOCs recientes.
 - Activos criticos.
 - SSL Health.
-- WAF Coverage.
+- Cobertura de proteccion perimetral.
 - Pais y zona horaria activa.
 - Infrastructure Monitor con CPU, RAM, disco, red, uptime del servidor y procesos.
 - Selector ES/EN en el header.
@@ -28,6 +28,7 @@ Rutas principales:
 - `/reports`
 - `/uptime`
 - `/infrastructure`
+- `/threat-map`
 - `/assets`
 - `/iocs`
 - `/threat-intel/virustotal`
@@ -49,8 +50,21 @@ APIs JSON protegidas por login:
 Reportes ejecutivos PDF:
 
 - Requieren el extra opcional `pip install -e ".[pdf]"`.
+- Si WeasyPrint falla, VigiScan intenta un PDF de respaldo con ReportLab.
 - Incluyen logo VigiScan, creditos de Kendry Rosario, portada, resumen ejecutivo, graficos estaticos, CVE, OWASP, plan de remediacion y conclusion.
 - Se guardan en `reports/pdf/`.
+
+Threat Map:
+
+- `/threat-map` muestra una visualizacion SOC de ciberamenazas.
+- En Configuracion se puede activar una URL externa embebible.
+- Si la fuente externa no carga, se muestra una visualizacion demostrativa local claramente identificada.
+
+Infrastructure remoto:
+
+- `/infrastructure` permite registrar servidores locales, Agent/API o manuales.
+- Uptime y Assets pueden asociarse a un servidor.
+- Si no hay agente configurado, el estado se muestra como `Pendiente de agente`.
 
 Roadmap de Integraciones:
 

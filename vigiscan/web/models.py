@@ -25,7 +25,7 @@ class User(UserMixin, db.Model):
     display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     language_preference: Mapped[str] = mapped_column(
         String(8),
-        default="en",
+        default="es",
         nullable=False,
     )
     virustotal_api_key_encrypted: Mapped[str | None] = mapped_column(
@@ -116,6 +116,10 @@ class MonitoredSite(db.Model):
     uptime_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     avg_response_time: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     last_check: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    infrastructure_host_id: Mapped[int | None] = mapped_column(
+        ForeignKey("infrastructure_hosts.id"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -126,6 +130,74 @@ class MonitoredSite(db.Model):
         cascade="all, delete-orphan",
         order_by="UptimeCheck.checked_at",
     )
+    infrastructure_host: Mapped["InfrastructureHost | None"] = relationship(
+        back_populates="monitored_sites",
+    )
+
+
+class InfrastructureHost(db.Model):
+    """Remote or local server registered for infrastructure monitoring."""
+
+    __tablename__ = "infrastructure_hosts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    ip_address: Mapped[str | None] = mapped_column(String(80))
+    hostname: Mapped[str | None] = mapped_column(String(255))
+    operating_system: Mapped[str | None] = mapped_column(String(160))
+    environment: Mapped[str] = mapped_column(String(80), default="Produccion", nullable=False)
+    responsible: Mapped[str | None] = mapped_column(String(160))
+    criticality: Mapped[str] = mapped_column(String(40), default="Media", nullable=False)
+    monitor_method: Mapped[str] = mapped_column(String(40), default="Manual", nullable=False)
+    api_url: Mapped[str | None] = mapped_column(String(2048))
+    api_token_encrypted: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    metrics: Mapped[list["RemoteInfrastructureMetric"]] = relationship(
+        back_populates="host",
+        cascade="all, delete-orphan",
+        order_by="RemoteInfrastructureMetric.collected_at",
+    )
+    monitored_sites: Mapped[list["MonitoredSite"]] = relationship(
+        back_populates="infrastructure_host",
+    )
+    assets: Mapped[list["Asset"]] = relationship(back_populates="infrastructure_host")
+
+
+class RemoteInfrastructureMetric(db.Model):
+    """Metric snapshot for a registered infrastructure host."""
+
+    __tablename__ = "remote_infrastructure_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    host_id: Mapped[int] = mapped_column(ForeignKey("infrastructure_hosts.id"), nullable=False)
+    cpu_percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    memory_percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    disk_percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    net_bytes_sent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    net_bytes_recv: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    upload_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    download_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    active_processes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    uptime: Mapped[str | None] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(80), default="Pendiente de agente", nullable=False)
+    collected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    host: Mapped[InfrastructureHost] = relationship(back_populates="metrics")
 
 
 class InfrastructureMetric(db.Model):
@@ -192,6 +264,10 @@ class Asset(db.Model):
     status: Mapped[str | None] = mapped_column(String(40), default="Activo")
     technology: Mapped[str | None] = mapped_column(String(160))
     environment: Mapped[str | None] = mapped_column(String(80))
+    infrastructure_host_id: Mapped[int | None] = mapped_column(
+        ForeignKey("infrastructure_hosts.id"),
+        nullable=True,
+    )
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -199,6 +275,9 @@ class Asset(db.Model):
         nullable=False,
     )
     scans: Mapped[list[Scan]] = relationship(back_populates="asset")
+    infrastructure_host: Mapped["InfrastructureHost | None"] = relationship(
+        back_populates="assets",
+    )
 
 
 class SystemSettings(db.Model):
@@ -216,6 +295,8 @@ class SystemSettings(db.Model):
     organization_name: Mapped[str | None] = mapped_column(String(180))
     organization_sector: Mapped[str | None] = mapped_column(String(120))
     organization_criticality: Mapped[str] = mapped_column(String(40), default="Media", nullable=False)
+    threat_map_url: Mapped[str | None] = mapped_column(String(2048))
+    threat_map_external_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

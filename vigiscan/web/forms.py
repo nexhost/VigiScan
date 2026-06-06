@@ -115,6 +115,12 @@ class MonitoredSiteForm(FlaskForm):
         validators=[Optional(), NumberRange(min=1, max=1440)],
     )
     notes = TextAreaField("Notas", validators=[Optional(), Length(max=4000)])
+    infrastructure_host_id = SelectField(
+        "Servidor asociado",
+        choices=[],
+        coerce=int,
+        validators=[Optional()],
+    )
     active = BooleanField("Activo", default=True)
     submit_site = SubmitField("Guardar sitio")
 
@@ -178,6 +184,12 @@ class AssetForm(FlaskForm):
             ("Desarrollo", "Desarrollo"),
             ("Otro", "Otro"),
         ],
+    )
+    infrastructure_host_id = SelectField(
+        "Servidor asociado",
+        choices=[],
+        coerce=int,
+        validators=[Optional()],
     )
     notes = TextAreaField("Notas", validators=[Optional(), Length(max=4000)])
     submit_asset = SubmitField("Guardar activo")
@@ -256,6 +268,11 @@ class RegionalSettingsForm(FlaskForm):
         ],
         default="Media",
     )
+    threat_map_url = StringField(
+        "URL externa Threat Map",
+        validators=[Optional(), Length(max=2048)],
+    )
+    threat_map_external_enabled = BooleanField("Activar mapa externo")
     submit_regional_settings = SubmitField("Guardar configuracion regional")
 
     def validate_timezone(self, field: StringField) -> None:
@@ -265,6 +282,51 @@ class RegionalSettingsForm(FlaskForm):
             ZoneInfo((field.data or "").strip())
         except ZoneInfoNotFoundError as exc:
             raise ValidationError("Zona horaria no valida para zoneinfo.") from exc
+
+
+class InfrastructureHostForm(FlaskForm):
+    """Create or update a remote infrastructure host."""
+
+    name = StringField("Nombre", validators=[DataRequired(), Length(max=160)])
+    ip_address = StringField("IP", validators=[Optional(), Length(max=80)])
+    hostname = StringField("Hostname", validators=[Optional(), Length(max=255)])
+    operating_system = StringField("Sistema operativo", validators=[Optional(), Length(max=160)])
+    environment = SelectField(
+        "Ambiente",
+        choices=[
+            ("Produccion", "Produccion"),
+            ("Staging", "Staging"),
+            ("Desarrollo", "Desarrollo"),
+            ("QA", "QA"),
+            ("Otro", "Otro"),
+        ],
+        default="Produccion",
+    )
+    responsible = StringField("Responsable", validators=[Optional(), Length(max=160)])
+    criticality = SelectField(
+        "Criticidad",
+        choices=[
+            ("Critica", "Critica"),
+            ("Alta", "Alta"),
+            ("Media", "Media"),
+            ("Baja", "Baja"),
+        ],
+        default="Media",
+    )
+    monitor_method = SelectField(
+        "Metodo de monitoreo",
+        choices=[
+            ("Local", "Local"),
+            ("Agent/API", "Agent/API"),
+            ("Manual", "Manual"),
+        ],
+        default="Manual",
+    )
+    api_url = StringField("API URL", validators=[Optional(), Length(max=2048)])
+    api_token = PasswordField("Token", validators=[Optional(), Length(max=512)])
+    notes = TextAreaField("Notas", validators=[Optional(), Length(max=4000)])
+    active = BooleanField("Activo", default=True)
+    submit_host = SubmitField("Guardar servidor")
 
 
 class IndicatorForm(FlaskForm):

@@ -1,4 +1,4 @@
-"""Passive WAF detection from headers and cookies."""
+"""Passive edge protection detection from headers and cookies."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 SIGNATURES = {
     "Cloudflare": ["cf-ray", "cf-cache-status", "__cf_bm"],
     "Akamai": ["akamai", "aka_"],
-    "AWS WAF": ["x-amzn", "awselb"],
+    "AWS edge protection": ["x-amzn", "awselb"],
     "Imperva": ["incap_ses", "visid_incap"],
     "SafeLine": ["safeline"],
     "ModSecurity": ["mod_security", "modsecurity"],
@@ -19,7 +19,7 @@ SIGNATURES = {
 
 
 def detect_waf(scan_result: dict[str, Any]) -> dict[str, Any]:
-    """Detect likely WAF from passive response metadata."""
+    """Detect likely edge protection from passive response metadata."""
     response = scan_result.get("response", {}) if isinstance(scan_result, dict) else {}
     headers = response.get("headers", {}) if isinstance(response, dict) else {}
     cookies = response.get("cookies", {}) if isinstance(response, dict) else {}
