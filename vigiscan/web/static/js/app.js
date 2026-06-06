@@ -1,6 +1,19 @@
 (() => {
   document.documentElement.dataset.ready = "true";
 
+  const sidebarToggle = document.querySelector("[data-sidebar-toggle]");
+  const collapsed = window.localStorage?.getItem("vigiscan-sidebar-collapsed") === "true";
+  if (collapsed) {
+    document.body.classList.add("sidebar-collapsed");
+  }
+  sidebarToggle?.addEventListener("click", () => {
+    document.body.classList.toggle("sidebar-collapsed");
+    window.localStorage?.setItem(
+      "vigiscan-sidebar-collapsed",
+      String(document.body.classList.contains("sidebar-collapsed")),
+    );
+  });
+
   const field = document.querySelector(".particle-field");
   if (field) {
     const count = Number(field.dataset.particles || 24);

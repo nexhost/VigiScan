@@ -215,6 +215,16 @@ class VirusTotalLookupForm(FlaskForm):
     submit_lookup = SubmitField("Consultar reputacion")
 
 
+class DomainLookupForm(FlaskForm):
+    """Run a DNS/domain reconnaissance lookup."""
+
+    target = StringField(
+        "Dominio, URL o IP",
+        validators=[DataRequired(), Length(max=2048)],
+    )
+    submit_lookup = SubmitField("Consultar DNS")
+
+
 class RegionalSettingsForm(FlaskForm):
     """Update global regional settings."""
 

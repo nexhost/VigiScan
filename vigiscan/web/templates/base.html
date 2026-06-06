@@ -19,54 +19,80 @@
   {% if current_user.is_authenticated %}
   <div class="app-layout">
     <aside class="soc-sidebar">
-      <a class="sidebar-brand" href="{{ url_for('main.dashboard') }}">
-        <img class="brand-logo" src="{{ url_for('static', filename='img/vigiscan-logo.svg') }}" alt="VigiScan">
-      </a>
+      <div class="sidebar-brand-row">
+        <a class="sidebar-brand" href="{{ url_for('main.dashboard') }}">
+          <img class="brand-logo" src="{{ url_for('static', filename='img/favicon.svg') }}" alt="VigiScan">
+          <span class="brand-copy">
+            <strong>VigiScan WAF</strong>
+            <small>Security Console</small>
+          </span>
+        </a>
+        <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Colapsar menu" title="Colapsar menu">
+          <span></span>
+          <span></span>
+        </button>
+      </div>
       <nav class="sidebar-nav">
-        <a class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
-          <span class="nav-icon">D</span>
-          {{ t("dashboard") }}
-        </a>
-        <a class="{% if request.endpoint == 'main.scan_new' %}active{% endif %}" href="{{ url_for('main.scan_new') }}">
-          <span class="nav-icon">S</span>
-          {{ t("new_scan") }}
-        </a>
-        <a class="{% if request.endpoint == 'main.reports' %}active{% endif %}" href="{{ url_for('main.reports') }}">
-          <span class="nav-icon">R</span>
-          {{ t("reports") }}
-        </a>
-        <a class="{% if request.endpoint in ['main.assets', 'main.asset_new', 'main.asset_detail', 'main.asset_edit'] %}active{% endif %}" href="{{ url_for('main.assets') }}">
-          <span class="nav-icon">A</span>
-          {{ t("assets") }}
-        </a>
-        <a class="{% if request.endpoint in ['main.uptime', 'main.uptime_check', 'main.uptime_edit'] %}active{% endif %}" href="{{ url_for('main.uptime') }}">
-          <span class="nav-icon">U</span>
-          {{ t("uptime_monitor") }}
-        </a>
-        <a class="{% if request.endpoint == 'main.infrastructure' %}active{% endif %}" href="{{ url_for('main.infrastructure') }}">
-          <span class="nav-icon">M</span>
-          {{ t("infrastructure_monitor") }}
-        </a>
-        <a class="{% if request.endpoint in ['main.iocs', 'main.ioc_new', 'main.ioc_detail', 'main.ioc_edit'] %}active{% endif %}" href="{{ url_for('main.iocs') }}">
-          <span class="nav-icon">I</span>
-          {{ t("ioc_center") }}
-        </a>
-        <a class="{% if request.endpoint == 'main.virustotal' %}active{% endif %}" href="{{ url_for('main.virustotal') }}">
-          <span class="nav-icon">T</span>
-          {{ t("threat_intelligence") }} / {{ t("virustotal") }}
-        </a>
-        <a class="{% if request.endpoint == 'main.owasp' %}active{% endif %}" href="{{ url_for('main.owasp') }}">
-          <span class="nav-icon">O</span>
-          {{ t("owasp_top_10") }}
-        </a>
-        <a class="{% if request.endpoint == 'main.settings' %}active{% endif %}" href="{{ url_for('main.settings') }}">
-          <span class="nav-icon">C</span>
-          {{ t("settings") }}
-        </a>
+        <div class="nav-section">
+          <span class="nav-section-title">General</span>
+          <a class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}" title="{{ t('dashboard') }}">
+            <span class="nav-icon">ST</span>
+            <span class="nav-label">{{ t("dashboard") }}</span>
+          </a>
+          <a class="{% if request.endpoint == 'main.scan_new' %}active{% endif %}" href="{{ url_for('main.scan_new') }}" title="{{ t('new_scan') }}">
+            <span class="nav-icon">SC</span>
+            <span class="nav-label">{{ t("new_scan") }}</span>
+          </a>
+          <a class="{% if request.endpoint == 'main.reports' %}active{% endif %}" href="{{ url_for('main.reports') }}" title="{{ t('reports') }}">
+            <span class="nav-icon">RP</span>
+            <span class="nav-label">{{ t("reports") }}</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Monitoreo</span>
+          <a class="{% if request.endpoint in ['main.uptime', 'main.uptime_check', 'main.uptime_edit'] %}active{% endif %}" href="{{ url_for('main.uptime') }}" title="{{ t('uptime_monitor') }}">
+            <span class="nav-icon">UP</span>
+            <span class="nav-label">{{ t("uptime_monitor") }}</span>
+          </a>
+          <a class="{% if request.endpoint == 'main.infrastructure' %}active{% endif %}" href="{{ url_for('main.infrastructure') }}" title="{{ t('infrastructure_monitor') }}">
+            <span class="nav-icon">IF</span>
+            <span class="nav-label">{{ t("infrastructure_monitor") }}</span>
+          </a>
+          <a class="{% if request.endpoint in ['main.assets', 'main.asset_new', 'main.asset_detail', 'main.asset_edit'] %}active{% endif %}" href="{{ url_for('main.assets') }}" title="{{ t('assets') }}">
+            <span class="nav-icon">AS</span>
+            <span class="nav-label">{{ t("assets") }}</span>
+          </a>
+          <a class="{% if request.endpoint == 'main.domain_dns' %}active{% endif %}" href="{{ url_for('main.domain_dns') }}" title="{{ t('dns_domains') }}">
+            <span class="nav-icon">DN</span>
+            <span class="nav-label">{{ t("dns_domains") }}</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Seguridad</span>
+          <a class="{% if request.endpoint == 'main.owasp' %}active{% endif %}" href="{{ url_for('main.owasp') }}" title="{{ t('owasp_top_10') }}">
+            <span class="nav-icon">OW</span>
+            <span class="nav-label">{{ t("owasp_top_10") }}</span>
+          </a>
+          <a class="{% if request.endpoint in ['main.iocs', 'main.ioc_new', 'main.ioc_detail', 'main.ioc_edit'] %}active{% endif %}" href="{{ url_for('main.iocs') }}" title="{{ t('ioc_center') }}">
+            <span class="nav-icon">IO</span>
+            <span class="nav-label">{{ t("ioc_center") }}</span>
+          </a>
+          <a class="{% if request.endpoint == 'main.virustotal' %}active{% endif %}" href="{{ url_for('main.virustotal') }}" title="{{ t('threat_intelligence') }} / {{ t('virustotal') }}">
+            <span class="nav-icon">VT</span>
+            <span class="nav-label">{{ t("threat_intelligence") }} / {{ t("virustotal") }}</span>
+          </a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Sistema</span>
+          <a class="{% if request.endpoint == 'main.settings' %}active{% endif %}" href="{{ url_for('main.settings') }}" title="{{ t('settings') }}">
+            <span class="nav-icon">CF</span>
+            <span class="nav-label">{{ t("settings") }}</span>
+          </a>
+        </div>
       </nav>
       <div class="sidebar-status">
         <span class="pulse-dot"></span>
-        Sensor web activo
+        <span class="nav-label">Sensor web activo</span>
       </div>
     </aside>
 
@@ -75,8 +101,8 @@
         <div class="topbar-brand">
           <img src="{{ url_for('static', filename='img/favicon.svg') }}" alt="" aria-hidden="true">
           <div>
-            <span class="eyebrow">Threat visibility</span>
-            <div class="topbar-title">VigiScan Operations</div>
+            <span class="eyebrow">VigiScan WAF</span>
+            <div class="topbar-title">{{ self.title() }}</div>
           </div>
         </div>
         <div class="topbar-actions">

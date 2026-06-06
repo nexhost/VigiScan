@@ -38,6 +38,7 @@ from modules.tech_detect import analyze_technologies
 from report import ReportDocument, build_report, save_report
 from scanner import ScanRequest, ScannerConfig, create_scanner
 from vigiscan.modules.api_security import analyze_api_security
+from vigiscan.modules.dns_lookup import lookup_domain, normalize_lookup_target
 from vigiscan.modules.infra_monitor import collect_metrics, human_uptime
 from vigiscan.modules.pdf_report import PDFReportUnavailable, generate_pdf_from_html
 from vigiscan.modules.passive_scan import analyze_passive
@@ -56,6 +57,7 @@ from vigiscan.modules.waf_detect import detect_waf
 from vigiscan.web.i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from vigiscan.web.forms import (
     AssetForm,
+    DomainLookupForm,
     IndicatorForm,
     LoginForm,
     MonitoredSiteForm,
@@ -124,6 +126,7 @@ def dashboard():
             "latest_reputation": vt_latest.reputation if vt_latest else 0,
             "latest_target": vt_latest.observable_value if vt_latest else "-",
         },
+        dns_summary=build_dns_dashboard_summary(),
         severity_chart={
             "labels": list(risk_counts.keys()),
             "values": list(risk_counts.values()),
@@ -616,6 +619,7 @@ def api_dashboard_summary():
                 "latest_target": vt_latest.observable_value if vt_latest else None,
                 "latest_reputation": vt_latest.reputation if vt_latest else 0,
             },
+            "dns": build_dns_dashboard_summary(),
             "infrastructure": metric_to_dict(capture_infrastructure_metric()),
         }
     )
@@ -917,6 +921,23 @@ def virustotal():
                 current_app.config["SECRET_KEY"],
             )
         ),
+    )
+
+
+@bp.route("/domain-intel/dns", methods=("GET", "POST"))
+@bp.route("/dns", methods=("GET", "POST"))
+@bp.route("/domain", methods=("GET", "POST"))
+@login_required
+def domain_dns():
+    form = DomainLookupForm()
+    result = None
+    if form.validate_on_submit():
+        result = lookup_domain(form.target.data.strip())
+    return render_template(
+        "domain_dns.html",
+        form=form,
+        result=result,
+        summary=build_dns_dashboard_summary(),
     )
 
 
@@ -1724,6 +1745,28 @@ def build_platform_stats(sites: list[MonitoredSite]) -> dict[str, Any]:
             for site in sites
             if site.ssl_enabled and site.checks and not site.checks[-1].ssl_valid
         ),
+    }
+
+
+def build_dns_dashboard_summary() -> dict[str, Any]:
+    """Summarize domain inventory coverage for DNS intelligence."""
+    domains = {
+        normalize_lookup_target(value)
+        for asset in Asset.query.all()
+        for value in (asset.domain, asset.url, asset.value)
+        if value
+    }
+    site_domains = {
+        normalize_lookup_target(site.url)
+        for site in MonitoredSite.query.all()
+        if site.url
+    }
+    domains = {domain for domain in domains | site_domains if domain}
+    return {
+        "domains": len(domains),
+        "assets_with_domain": Asset.query.filter(Asset.domain.isnot(None)).count(),
+        "monitored_domains": len(site_domains),
+        "latest_domain": sorted(domains)[0] if domains else "-",
     }
 
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from vigiscan.modules.pdf_report import PDFReportUnavailable
+from vigiscan.modules.dns_lookup import DomainLookupResult
 from vigiscan.modules.screenshot import ScreenshotResult
 from vigiscan.web.app import create_app
 from vigiscan.web.models import Asset, InfrastructureMetric, MonitoredSite, Scan, User, db
@@ -209,6 +210,7 @@ def test_requested_web_routes_are_available(client):
         "/uptime",
         "/infrastructure",
         "/assets",
+        "/dns",
         "/iocs",
         "/threat-intel/virustotal",
         "/owasp",
@@ -218,6 +220,43 @@ def test_requested_web_routes_are_available(client):
     for path in expected_ok:
         response = client.get(path)
         assert response.status_code == 200, path
+
+
+def test_dns_domain_lookup_page_returns_records(client, monkeypatch):
+    login(client)
+
+    def fake_lookup(target: str) -> DomainLookupResult:
+        return DomainLookupResult(
+            ok=True,
+            target=target,
+            hostname="example.com",
+            records={
+                "A": ["93.184.216.34"],
+                "AAAA": [],
+                "MX": ["mail.example.com (priority 10)"],
+                "NS": ["ns1.example.com"],
+                "TXT": ["v=spf1 include:example.com ~all"],
+                "SOA": [],
+                "CAA": [],
+            },
+            reverse_dns=[],
+            canonical_name="example.com",
+            ip_addresses=["93.184.216.34"],
+            message="Consulta completada.",
+            resolver="test",
+        )
+
+    monkeypatch.setattr("vigiscan.web.routes.lookup_domain", fake_lookup)
+    response = client.post(
+        "/dns",
+        data={"target": "https://example.com"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"DNS / Dominios" in response.data
+    assert b"93.184.216.34" in response.data
+    assert b"mail.example.com" in response.data
 
 
 def test_dashboard_uptime_and_infrastructure_apis_return_json(client, app, monkeypatch):

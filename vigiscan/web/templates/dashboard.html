@@ -9,7 +9,10 @@
     <h1>Centro de Operaciones VigiScan</h1>
     <p>Vista clara de exposicion web, severidad, tecnologias detectadas y actividad reciente.</p>
   </div>
-  <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">Nuevo escaneo</a>
+  <div class="hero-actions">
+    <a class="btn btn-cyber" href="{{ url_for('main.domain_dns') }}">DNS / Dominios</a>
+    <a class="btn btn-glow" href="{{ url_for('main.scan_new') }}">Nuevo escaneo</a>
+  </div>
 </section>
 
 <section class="executive-dashboard animate-in delay-1">
@@ -78,6 +81,13 @@
       <strong data-count="{{ vt_summary.cached_results }}">{{ vt_summary.cached_results }}</strong>
       <canvas class="sparkline" data-values="1,1,2,2,3,3,4,5"></canvas>
       <em>+ 2%</em>
+    </article>
+    <article class="executive-card accent-cyan" data-tooltip="Dominios disponibles para consulta DNS">
+      <small>Inventory</small>
+      <span>DNS / Dominios</span>
+      <strong data-count="{{ dns_summary.domains }}">{{ dns_summary.domains }}</strong>
+      <canvas class="sparkline" data-values="1,2,2,3,3,4,4,5"></canvas>
+      <em>Lookup</em>
     </article>
   </div>
 </section>
@@ -225,6 +235,26 @@
     <div class="metric-label">Security Posture Score</div>
     <div class="metric-value">{{ 100 - dashboard_stats.average_risk if dashboard_stats.average_risk else 100 }}</div>
     <div class="metric-caption">Mayor es mejor</div>
+  </div>
+  <div class="metric-card animate-in">
+    <div class="metric-label">DNS / Dominios</div>
+    <div class="metric-value">{{ dns_summary.domains }}</div>
+    <div class="metric-caption">Dominios consultables</div>
+  </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">Assets con dominio</div>
+    <div class="metric-value">{{ dns_summary.assets_with_domain }}</div>
+    <div class="metric-caption">Inventario DNS</div>
+  </div>
+  <div class="metric-card animate-in delay-2">
+    <div class="metric-label">Dominios Uptime</div>
+    <div class="metric-value">{{ dns_summary.monitored_domains }}</div>
+    <div class="metric-caption">Apps relacionadas</div>
+  </div>
+  <div class="metric-card animate-in delay-3">
+    <div class="metric-label">Consulta DNS</div>
+    <div class="metric-date"><a class="link-cyber" href="{{ url_for('main.domain_dns') }}">Abrir modulo</a></div>
+    <div class="metric-caption text-break">{{ dns_summary.latest_domain }}</div>
   </div>
 </section>
 
