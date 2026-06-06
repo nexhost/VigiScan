@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Float, JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -23,6 +23,15 @@ class User(UserMixin, db.Model):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    virustotal_api_key_encrypted: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    virustotal_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -68,4 +77,70 @@ class Scan(db.Model):
         nullable=True,
     )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    asset_id: Mapped[int | None] = mapped_column(ForeignKey("assets.id"), nullable=True)
     user: Mapped[User] = relationship(back_populates="scans")
+    asset: Mapped["Asset | None"] = relationship(back_populates="scans")
+
+
+class MonitoredSite(db.Model):
+    """Website monitored for uptime and availability."""
+
+    __tablename__ = "monitored_sites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    ssl_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    uptime_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    avg_response_time: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    last_check: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    checks: Mapped[list["UptimeCheck"]] = relationship(
+        back_populates="site",
+        cascade="all, delete-orphan",
+        order_by="UptimeCheck.checked_at",
+    )
+
+
+class UptimeCheck(db.Model):
+    """One uptime check result."""
+
+    __tablename__ = "uptime_checks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    site_id: Mapped[int] = mapped_column(ForeignKey("monitored_sites.id"), nullable=False)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    up: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer)
+    response_time_ms: Mapped[int | None] = mapped_column(Integer)
+    ssl_valid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
+    site: Mapped[MonitoredSite] = relationship(back_populates="checks")
+
+
+class Asset(db.Model):
+    """Attack surface asset inventory entry."""
+
+    __tablename__ = "assets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    asset_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    value: Mapped[str] = mapped_column(String(2048), nullable=False)
+    owner: Mapped[str | None] = mapped_column(String(160))
+    environment: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    scans: Mapped[list[Scan]] = relationship(back_populates="asset")

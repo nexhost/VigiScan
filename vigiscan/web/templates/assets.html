@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Assets - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Attack surface inventory</span>
+    <h1>Assets</h1>
+    <p>Inventario defensivo de dominios, IPs, aplicaciones y servidores bajo observacion.</p>
+  </div>
+  <a class="btn btn-cyber" href="{{ url_for('main.uptime') }}">Uptime Monitor</a>
+</section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading">
+        <span>Registrar asset</span>
+        <small>Superficie web</small>
+      </div>
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.name.label(class="form-label") }}
+          {{ form.name(class="form-control cyber-input", placeholder="Portal clientes") }}
+          {% for error in form.name.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ form.asset_type.label(class="form-label") }}
+          {{ form.asset_type(class="form-select cyber-input") }}
+        </div>
+        <div class="mb-3">
+          {{ form.value.label(class="form-label") }}
+          {{ form.value(class="form-control cyber-input", placeholder="example.com / 203.0.113.10") }}
+          {% for error in form.value.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ form.owner.label(class="form-label") }}
+          {{ form.owner(class="form-control cyber-input", placeholder="Equipo responsable") }}
+        </div>
+        <div class="mb-3">
+          {{ form.environment.label(class="form-label") }}
+          {{ form.environment(class="form-select cyber-input") }}
+        </div>
+        {{ form.submit_asset(class="btn btn-glow w-100") }}
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading">
+        <span>Inventario</span>
+        <small>{{ assets|length }} activos</small>
+      </div>
+      <div class="asset-grid">
+        {% for asset in assets %}
+        <article class="asset-card">
+          <div class="asset-head">
+            <div>
+              <span class="owasp-tag">{{ asset.asset_type }}</span>
+              <h2>{{ asset.name }}</h2>
+            </div>
+            <span class="badge-muted">{{ asset.environment or "-" }}</span>
+          </div>
+          <div class="asset-value text-break">{{ asset.value }}</div>
+          <div class="asset-meta">
+            <span>Responsable</span>
+            <strong>{{ asset.owner or "-" }}</strong>
+          </div>
+          <div class="asset-meta">
+            <span>Registrado</span>
+            <strong>{{ asset.created_at.strftime("%Y-%m-%d %H:%M") }}</strong>
+          </div>
+        </article>
+        {% else %}
+        <div class="screenshot-unavailable">Sin assets registrados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Threat Intelligence - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Threat intelligence</span>
+    <h1>VirusTotal Reputation</h1>
+    <p>Consulta reputacion de URLs, dominios o IPs con una integracion opcional y defensiva.</p>
+  </div>
+  <a class="btn btn-ghost" href="{{ url_for('main.settings') }}">Configurar API key</a>
+</section>
+
+<section class="row g-4 mb-4">
+  <div class="col-lg-5">
+    <div class="glass-panel h-100 animate-in delay-1">
+      <div class="panel-heading">
+        <span>Consulta</span>
+        <small>{{ "Activa" if enabled else "No configurada" }}</small>
+      </div>
+      {% if not enabled %}
+      <div class="audit-note">
+        VirusTotal esta desactivado. Agrega tu API key en Configuracion para habilitar
+        consultas de reputacion.
+      </div>
+      {% endif %}
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.target.label(class="form-label") }}
+          {{ form.target(class="form-control cyber-input", placeholder="https://example.com, example.com o 203.0.113.10") }}
+          {% for error in form.target.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        {{ form.submit_lookup(class="btn btn-glow w-100") }}
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading">
+        <span>Resultado</span>
+        <small>Reputacion defensiva</small>
+      </div>
+      {% if result %}
+        {% if not result.ok %}
+        <div class="screenshot-unavailable">{{ result.message }}</div>
+        {% else %}
+        <div class="vt-result">
+          <div class="vt-score">
+            <span>{{ result.stats.malicious + result.stats.suspicious }}</span>
+            <small>detecciones</small>
+          </div>
+          <div class="vt-facts">
+            <div><span>Objetivo</span><strong class="text-break">{{ result.target }}</strong></div>
+            <div><span>Tipo</span><strong>{{ result.kind }}</strong></div>
+            <div><span>Malicioso</span><strong>{{ result.stats.malicious }}</strong></div>
+            <div><span>Sospechoso</span><strong>{{ result.stats.suspicious }}</strong></div>
+            <div><span>Inofensivo</span><strong>{{ result.stats.harmless }}</strong></div>
+            <div><span>No detectado</span><strong>{{ result.stats.undetected }}</strong></div>
+          </div>
+          {% if result.permalink %}
+          <a class="btn btn-cyber mt-3" href="{{ result.permalink }}" target="_blank" rel="noreferrer">Abrir referencia</a>
+          {% endif %}
+        </div>
+        {% endif %}
+      {% else %}
+      <div class="screenshot-unavailable">Sin consulta ejecutada.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

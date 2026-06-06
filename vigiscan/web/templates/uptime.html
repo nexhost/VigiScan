@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Uptime Monitor - VigiScan{% endblock %}
+{% block body_class %}uptime-dark-body{% endblock %}
+
+{% block content %}
+<section class="uptime-page animate-in">
+  <div class="uptime-status-strip">
+    <div class="uptime-status-copy">
+      <span class="status-square">✓</span>
+      <strong>{% if stats.all_operational %}All systems operational{% else %}Systems require attention{% endif %}</strong>
+    </div>
+    <span>last updated at {{ stats.latest_update }}</span>
+  </div>
+
+  <div class="uptime-kpi-band">
+    <article class="uptime-kpi">
+      <span class="uptime-icon icon-total"></span>
+      <div>
+        <strong>{{ stats.total_sites }}</strong>
+        <small>All Systems</small>
+      </div>
+    </article>
+    <article class="uptime-kpi">
+      <span class="uptime-icon icon-up">↑</span>
+      <div>
+        <strong>{{ stats.up_sites }}</strong>
+        <small>Up Systems</small>
+      </div>
+    </article>
+    <article class="uptime-kpi">
+      <span class="uptime-icon icon-down">↓</span>
+      <div>
+        <strong>{{ stats.down_sites }}</strong>
+        <small>Down Systems</small>
+      </div>
+    </article>
+    <article class="uptime-kpi">
+      <span class="uptime-icon icon-ssl">◆</span>
+      <div>
+        <strong>{{ stats.ssl_valid }}</strong>
+        <small>Valid SSL</small>
+      </div>
+    </article>
+    <article class="uptime-kpi">
+      <span class="uptime-icon icon-warn">?</span>
+      <div>
+        <strong>{{ stats.ssl_expired }}</strong>
+        <small>Invalid SSL</small>
+      </div>
+    </article>
+    <article class="uptime-kpi">
+      <span class="uptime-icon icon-alert">!</span>
+      <div>
+        <strong>{{ stats.down_sites + stats.ssl_expired }}</strong>
+        <small>SSL Not Exists</small>
+      </div>
+    </article>
+  </div>
+
+  <div class="uptime-dashboard-grid">
+    <article class="uptime-panel uptime-donut-panel">
+      <h2>GLOBAL UPTIME</h2>
+      <div class="uptime-donut" style="--uptime: {{ stats.global_uptime }};">
+        <span>{{ stats.global_uptime }}%</span>
+      </div>
+      <strong>all time</strong>
+    </article>
+
+    <article class="uptime-panel uptime-chart-wide">
+      <div class="uptime-legend">
+        <span><i class="legend-min"></i>{{ stats.min_response_time }} ms <small>Min. Response Time</small></span>
+        <span><i class="legend-avg"></i>{{ stats.avg_response_time }} ms <small>Avg. Response Time</small></span>
+        <span><i class="legend-max"></i>{{ stats.max_response_time }} ms <small>Max. Response Time</small></span>
+      </div>
+      <div class="uptime-chart-shell">
+        <canvas id="responseChart" aria-label="Respuesta promedio"></canvas>
+      </div>
+    </article>
+
+    <article class="uptime-panel uptime-world-panel">
+      <h2>World Map</h2>
+      <div class="uptime-globe" aria-label="Mapa mundial">
+        <span class="globe-pin pin-one"></span>
+        <span class="globe-pin pin-two"></span>
+        <span class="globe-pin pin-three"></span>
+      </div>
+    </article>
+  </div>
+
+  <div class="uptime-secondary-grid">
+    <article class="uptime-panel">
+      <div class="uptime-panel-head">
+        <span>Availability 24h</span>
+        <small>5 min checks</small>
+      </div>
+      <div class="uptime-mini-chart">
+        <canvas id="availability24Chart" aria-label="Disponibilidad 24 horas"></canvas>
+      </div>
+    </article>
+    <article class="uptime-panel">
+      <div class="uptime-panel-head">
+        <span>Availability 7d</span>
+        <small>% uptime</small>
+      </div>
+      <div class="uptime-mini-chart">
+        <canvas id="availability7Chart" aria-label="Disponibilidad siete dias"></canvas>
+      </div>
+    </article>
+    <article class="uptime-panel">
+      <div class="uptime-panel-head">
+        <span>Availability 30d</span>
+        <small>% uptime</small>
+      </div>
+      <div class="uptime-mini-chart">
+        <canvas id="availability30Chart" aria-label="Disponibilidad treinta dias"></canvas>
+      </div>
+    </article>
+    <article class="uptime-panel">
+      <div class="uptime-panel-head">
+        <span>Down Trend</span>
+        <small>7 days</small>
+      </div>
+      <div class="uptime-mini-chart">
+        <canvas id="downTrendChart" aria-label="Tendencia de caidas"></canvas>
+      </div>
+    </article>
+  </div>
+
+  <div class="uptime-toolbar">
+    <div>
+      <small>ALL</small>
+      <strong>Systems</strong>
+    </div>
+    <div class="uptime-toolbar-actions">
+      <button class="btn uptime-add-btn" type="button" data-bs-toggle="collapse" data-bs-target="#newUptimeSite" aria-expanded="false" aria-controls="newUptimeSite">+ Add monitor</button>
+      <label class="uptime-switch">
+        <input id="cardModeToggle" type="checkbox">
+        <span></span>
+        Card Mode
+      </label>
+    </div>
+  </div>
+
+  <div class="collapse" id="newUptimeSite">
+    <section class="uptime-panel uptime-form-panel">
+      <form class="uptime-form" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div>
+          {{ form.name.label(class="form-label") }}
+          {{ form.name(class="form-control cyber-input", placeholder="Portal principal") }}
+          {% for error in form.name.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <div>
+          {{ form.url.label(class="form-label") }}
+          {{ form.url(class="form-control cyber-input", placeholder="https://example.com") }}
+          {% for error in form.url.errors %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+        <label class="uptime-active-option">
+          {{ form.active() }}
+          {{ form.active.label.text }}
+        </label>
+        {{ form.submit_site(class="btn uptime-add-btn") }}
+      </form>
+    </section>
+  </div>
+
+  <section class="uptime-panel uptime-table-panel" id="uptimeSystems">
+    <div class="table-responsive">
+      <table class="table uptime-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Website</th>
+            <th>SSL</th>
+            <th>Uptime</th>
+            <th>Status Code</th>
+            <th>Avg. Response Time</th>
+            <th>History (last 30 checks)</th>
+            <th class="text-end">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          {% set site = row.site %}
+          {% set last = row.last %}
+          <tr>
+            <td>
+              <div class="uptime-website">
+                <form method="post" action="{{ url_for('main.uptime_check', site_id=site.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="uptime-expand" type="submit" title="Chequear ahora">⌄</button>
+                </form>
+                <span class="site-favicon">{{ site.name[:1].upper() }}</span>
+                <div>
+                  <strong>{{ site.name }}</strong>
+                  <small>{{ site.url }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if site.ssl_enabled and last and last.ssl_valid %}
+              <span class="uptime-pill pill-valid">VALID</span>
+              {% elif site.ssl_enabled %}
+              <span class="uptime-pill pill-danger">INVALID</span>
+              {% else %}
+              <span class="uptime-pill pill-muted">NO TLS</span>
+              {% endif %}
+            </td>
+            <td><span class="uptime-pill pill-uptime">{{ site.uptime_percentage }}%</span></td>
+            <td>
+              {% if last and last.up %}
+              <span class="uptime-pill pill-code">{{ row.status_label }}</span>
+              {% elif last %}
+              <span class="uptime-pill pill-danger">{{ row.status_label }}</span>
+              {% else %}
+              <span class="uptime-pill pill-muted">NO DATA</span>
+              {% endif %}
+            </td>
+            <td><span class="uptime-pill pill-time">{{ site.avg_response_time }} ms</span></td>
+            <td>
+              <div class="uptime-history" aria-label="Historial de {{ site.name }}">
+                {% for item in row.history %}
+                <span class="history-bar history-{{ item }}"></span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="text-end">
+              {% if last and last.up %}
+              <span class="uptime-status-dot status-ok">✓</span>
+              <span class="visually-hidden">En linea</span>
+              {% elif last %}
+              <span class="uptime-status-dot status-bad">!</span>
+              <span class="visually-hidden">Caido</span>
+              {% else %}
+              <span class="uptime-status-dot status-idle">?</span>
+              <span class="visually-hidden">Sin datos</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="uptime-empty">Sin sitios monitoreados.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+  const uptimeCharts = {{ charts | tojson }};
+  Chart.defaults.color = "#a9bdc7";
+  Chart.defaults.borderColor = "rgba(77, 132, 150, 0.22)";
+
+  function uptimeLine(id, data, label, color, maxValue = undefined) {
+    new Chart(document.getElementById(id), {
+      type: "line",
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label,
+          data: data.values,
+          borderColor: color,
+          backgroundColor: `${color}1f`,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          fill: true,
+          tension: 0.35
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { color: "rgba(77, 132, 150, 0.1)" } },
+          y: { beginAtZero: true, suggestedMax: maxValue }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  function uptimeBar(id, data, label) {
+    new Chart(document.getElementById(id), {
+      type: "bar",
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label,
+          data: data.values,
+          backgroundColor: "rgba(255, 112, 112, 0.82)",
+          borderRadius: 3
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+
+  uptimeLine("availability24Chart", uptimeCharts.availability_24h, "Disponibilidad", "#20d45a", 100);
+  uptimeLine("availability7Chart", uptimeCharts.availability_7d, "Disponibilidad", "#37a8ff", 100);
+  uptimeLine("availability30Chart", uptimeCharts.availability_30d, "Disponibilidad", "#00d7a7", 100);
+  uptimeLine("responseChart", uptimeCharts.avg_response, "Respuesta", "#ff4d4d");
+  uptimeBar("downTrendChart", uptimeCharts.down_trend, "Caidas");
+
+  const cardModeToggle = document.getElementById("cardModeToggle");
+  const systemsPanel = document.getElementById("uptimeSystems");
+  if (cardModeToggle && systemsPanel) {
+    cardModeToggle.addEventListener("change", () => {
+      systemsPanel.classList.toggle("uptime-card-mode", cardModeToggle.checked);
+    });
+  }
+</script>
+{% endblock %}

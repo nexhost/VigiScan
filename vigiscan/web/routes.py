@@ -6,6 +6,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from flask import (
     Blueprint,
@@ -34,8 +35,24 @@ from scanner import ScanRequest, ScannerConfig, create_scanner
 from vigiscan.modules.passive_scan import analyze_passive
 from vigiscan.modules.screenshot import capture_site_screenshot
 from vigiscan.modules.spider import SpiderConfig, crawl_site
-from vigiscan.web.forms import LoginForm, PasswordChangeForm, ProfileForm, ScanForm
-from vigiscan.web.models import Scan, User, db
+from vigiscan.modules.uptime import check_url
+from vigiscan.modules.virustotal import (
+    decrypt_api_key,
+    detect_kind,
+    encrypt_api_key,
+    query_reputation,
+)
+from vigiscan.web.forms import (
+    AssetForm,
+    LoginForm,
+    MonitoredSiteForm,
+    PasswordChangeForm,
+    ProfileForm,
+    ScanForm,
+    VirusTotalLookupForm,
+    VirusTotalSettingsForm,
+)
+from vigiscan.web.models import Asset, MonitoredSite, Scan, UptimeCheck, User, db
 
 bp = Blueprint("main", __name__)
 
@@ -55,12 +72,14 @@ def dashboard():
     }
     top_technologies = detected_technology_counts(limit=10)
     dashboard_stats = build_dashboard_stats(all_scans)
+    monitored_sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
     return render_template(
         "dashboard.html",
         scans=scans,
         total_scans=total_scans,
         risk_counts=risk_counts,
         dashboard_stats=dashboard_stats,
+        platform_stats=build_platform_stats(monitored_sites),
         severity_chart={
             "labels": list(risk_counts.keys()),
             "values": list(risk_counts.values()),
@@ -120,6 +139,7 @@ def scan_new():
             status="En ejecucion",
             user_id=current_user.id,
         )
+        scan.asset = match_asset_for_url(scan.target_url)
         db.session.add(scan)
         db.session.commit()
 
@@ -139,10 +159,12 @@ def scan_new():
 def settings():
     profile_form = ProfileForm(prefix="profile")
     password_form = PasswordChangeForm(prefix="password")
+    vt_form = VirusTotalSettingsForm(prefix="vt")
 
     if request.method == "GET":
         profile_form.email.data = current_user.email or ""
         profile_form.display_name.data = current_user.display_name or ""
+        vt_form.enabled.data = bool(current_user.virustotal_enabled)
 
     if profile_form.submit_profile.data and profile_form.validate_on_submit():
         current_user.email = (profile_form.email.data or "").strip() or None
@@ -162,10 +184,23 @@ def settings():
             flash("Contrasena actualizada correctamente.", "success")
             return redirect(url_for("main.settings"))
 
+    if vt_form.submit_vt_settings.data and vt_form.validate_on_submit():
+        api_key = (vt_form.api_key.data or "").strip()
+        if api_key:
+            current_user.virustotal_api_key_encrypted = encrypt_api_key(
+                api_key,
+                current_app.config["SECRET_KEY"],
+            )
+        current_user.virustotal_enabled = bool(vt_form.enabled.data)
+        db.session.commit()
+        flash("Configuracion de VirusTotal actualizada.", "success")
+        return redirect(url_for("main.settings"))
+
     return render_template(
         "settings.html",
         profile_form=profile_form,
         password_form=password_form,
+        vt_form=vt_form,
     )
 
 
@@ -270,6 +305,92 @@ def reports():
 @login_required
 def owasp():
     return render_template("owasp.html")
+
+
+@bp.route("/uptime", methods=("GET", "POST"))
+@login_required
+def uptime():
+    form = MonitoredSiteForm()
+    if form.validate_on_submit():
+        site = MonitoredSite(
+            name=form.name.data.strip(),
+            url=form.url.data.strip(),
+            active=bool(form.active.data),
+        )
+        db.session.add(site)
+        db.session.commit()
+        run_uptime_check(site)
+        db.session.commit()
+        flash("Sitio agregado al monitoreo.", "success")
+        return redirect(url_for("main.uptime"))
+
+    sites = MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
+    stats = uptime_dashboard_stats(sites)
+    return render_template(
+        "uptime.html",
+        form=form,
+        sites=sites,
+        stats=stats,
+        charts=uptime_chart_data(sites),
+        rows=uptime_table_rows(sites),
+    )
+
+
+@bp.post("/uptime/<int:site_id>/check")
+@login_required
+def uptime_check(site_id: int):
+    site = db.get_or_404(MonitoredSite, site_id)
+    run_uptime_check(site)
+    db.session.commit()
+    flash("Chequeo uptime ejecutado.", "success")
+    return redirect(url_for("main.uptime"))
+
+
+@bp.route("/assets", methods=("GET", "POST"))
+@login_required
+def assets():
+    form = AssetForm()
+    if form.validate_on_submit():
+        asset = Asset(
+            name=form.name.data.strip(),
+            asset_type=form.asset_type.data,
+            value=form.value.data.strip(),
+            owner=(form.owner.data or "").strip() or None,
+            environment=form.environment.data,
+        )
+        db.session.add(asset)
+        db.session.commit()
+        flash("Activo registrado.", "success")
+        return redirect(url_for("main.assets"))
+    return render_template(
+        "assets.html",
+        form=form,
+        assets=Asset.query.order_by(Asset.created_at.desc()).all(),
+    )
+
+
+@bp.route("/threat-intelligence/virustotal", methods=("GET", "POST"))
+@login_required
+def virustotal():
+    form = VirusTotalLookupForm()
+    result = None
+    if form.validate_on_submit():
+        api_key = (
+            decrypt_api_key(
+                current_user.virustotal_api_key_encrypted,
+                current_app.config["SECRET_KEY"],
+            )
+            if current_user.virustotal_enabled
+            else None
+        )
+        kind = detect_kind(form.target.data.strip())
+        result = query_reputation(form.target.data.strip(), api_key, kind=kind)
+    return render_template(
+        "virustotal.html",
+        form=form,
+        result=result,
+        enabled=bool(current_user.virustotal_enabled),
+    )
 
 
 def run_vigiscan_scan(scan: Scan, *, options: dict[str, Any] | None = None) -> None:
@@ -446,6 +567,20 @@ def detected_technology_counts(limit: int = 6) -> list[dict[str, int | str]]:
     ]
 
 
+def match_asset_for_url(target_url: str) -> Asset | None:
+    """Find a registered asset that corresponds to a scan target."""
+    parsed = urlparse(target_url)
+    host = (parsed.hostname or "").lower()
+    normalized_target = target_url.lower()
+    for asset in Asset.query.order_by(Asset.created_at.desc()).all():
+        value = (asset.value or "").strip().lower()
+        if not value:
+            continue
+        if value == host or value in normalized_target:
+            return asset
+    return None
+
+
 def default_scan_options() -> dict[str, Any]:
     """Return default web scan options."""
     return {
@@ -517,6 +652,36 @@ def build_dashboard_stats(scans: list[Scan]) -> dict[str, Any]:
                 reverse=True,
             )[:5]
         ],
+    }
+
+
+def build_platform_stats(sites: list[MonitoredSite]) -> dict[str, Any]:
+    """Build global platform cards for assets and uptime."""
+    latest_checks = [
+        site.checks[-1]
+        for site in sites
+        if site.checks
+    ]
+    monitored_with_checks = [site for site in sites if site.checks]
+    average_uptime = (
+        round(
+            sum(site.uptime_percentage for site in monitored_with_checks)
+            / len(monitored_with_checks),
+            1,
+        )
+        if monitored_with_checks
+        else 0
+    )
+    return {
+        "asset_count": Asset.query.count(),
+        "monitored_sites": len(sites),
+        "average_uptime": average_uptime,
+        "down_sites": sum(1 for check in latest_checks if not check.up),
+        "ssl_attention": sum(
+            1
+            for site in sites
+            if site.ssl_enabled and site.checks and not site.checks[-1].ssl_valid
+        ),
     }
 
 
@@ -696,6 +861,201 @@ def scan_owasp_categories(scan: Scan) -> list[dict[str, str]]:
         {"id": category_id, "label": label}
         for category_id, label in categories.items()
     ]
+
+
+def run_uptime_check(site: MonitoredSite) -> UptimeCheck:
+    """Run and persist one uptime check for a monitored site."""
+    result = check_url(site.url)
+    check = UptimeCheck(
+        site_id=site.id,
+        up=result["up"],
+        status_code=result["status_code"],
+        response_time_ms=result["response_time_ms"],
+        ssl_valid=result["ssl_valid"],
+        error=result["error"],
+    )
+    db.session.add(check)
+    site.ssl_enabled = result["ssl_enabled"]
+    site.last_check = datetime.now(UTC)
+    db.session.flush()
+    refresh_site_uptime_metrics(site)
+    return check
+
+
+def refresh_site_uptime_metrics(site: MonitoredSite) -> None:
+    checks = UptimeCheck.query.filter_by(site_id=site.id).all()
+    total = len(checks)
+    up = sum(1 for check in checks if check.up)
+    times = [
+        check.response_time_ms
+        for check in checks
+        if check.response_time_ms is not None
+    ]
+    site.uptime_percentage = round((up / total) * 100, 2) if total else 0.0
+    site.avg_response_time = round(sum(times) / len(times), 1) if times else 0.0
+
+
+def run_due_uptime_checks() -> None:
+    """Run checks for active sites older than five minutes."""
+    threshold = datetime.now(UTC) - timedelta(minutes=5)
+    sites = MonitoredSite.query.filter_by(active=True).all()
+    for site in sites:
+        if site.last_check is None or _aware_datetime(site.last_check) <= threshold:
+            run_uptime_check(site)
+    db.session.commit()
+
+
+def uptime_dashboard_stats(sites: list[MonitoredSite]) -> dict[str, Any]:
+    checks = [
+        check
+        for site in sites
+        for check in site.checks
+    ]
+    response_times = [
+        check.response_time_ms
+        for check in checks
+        if check.response_time_ms is not None
+    ]
+    latest_checks = [site.checks[-1] for site in sites if site.checks]
+    latest_update = max(
+        (_aware_datetime(check.checked_at) for check in latest_checks),
+        default=None,
+    )
+    monitored_with_checks = [site for site in sites if site.checks]
+    global_uptime = (
+        round(
+            sum(site.uptime_percentage for site in monitored_with_checks)
+            / len(monitored_with_checks),
+            2,
+        )
+        if monitored_with_checks
+        else 0.0
+    )
+    return {
+        "total_sites": len(sites),
+        "up_sites": sum(1 for site in sites if site.checks and site.checks[-1].up),
+        "down_sites": sum(1 for site in sites if site.checks and not site.checks[-1].up),
+        "ssl_valid": sum(1 for site in sites if site.ssl_enabled and site.checks and site.checks[-1].ssl_valid),
+        "ssl_expired": sum(1 for site in sites if site.ssl_enabled and site.checks and not site.checks[-1].ssl_valid),
+        "avg_response_time": round(sum(response_times) / len(response_times), 1)
+        if response_times
+        else 0,
+        "min_response_time": min(response_times) if response_times else 0,
+        "max_response_time": max(response_times) if response_times else 0,
+        "global_uptime": global_uptime,
+        "latest_update": latest_update.strftime("%Y-%m-%d %H:%M:%S")
+        if latest_update
+        else "-",
+        "all_operational": bool(sites) and all(check.up for check in latest_checks)
+        if latest_checks
+        else False,
+    }
+
+
+def uptime_chart_data(sites: list[MonitoredSite]) -> dict[str, Any]:
+    checks = [
+        check
+        for site in sites
+        for check in site.checks
+    ]
+    return {
+        "availability_24h": uptime_availability_series(checks, hours=24),
+        "availability_7d": uptime_availability_series(checks, days=7),
+        "availability_30d": uptime_availability_series(checks, days=30),
+        "avg_response": uptime_response_series(checks),
+        "down_trend": uptime_down_trend(checks),
+    }
+
+
+def uptime_availability_series(
+    checks: list[UptimeCheck],
+    *,
+    hours: int | None = None,
+    days: int | None = None,
+) -> dict[str, list[Any]]:
+    now = datetime.now(UTC)
+    if hours is not None:
+        labels = [
+            (now - timedelta(hours=offset)).strftime("%H:00")
+            for offset in range(hours - 1, -1, -1)
+        ]
+        buckets = {label: [] for label in labels}
+        for check in checks:
+            label = _aware_datetime(check.checked_at).strftime("%H:00")
+            if label in buckets:
+                buckets[label].append(check.up)
+    else:
+        length = days or 7
+        labels = [
+            (now - timedelta(days=offset)).date().isoformat()
+            for offset in range(length - 1, -1, -1)
+        ]
+        buckets = {label: [] for label in labels}
+        for check in checks:
+            label = _aware_datetime(check.checked_at).date().isoformat()
+            if label in buckets:
+                buckets[label].append(check.up)
+    values = [
+        round((sum(1 for item in values if item) / len(values)) * 100, 1)
+        if values
+        else 0
+        for values in buckets.values()
+    ]
+    return {"labels": labels, "values": values}
+
+
+def uptime_response_series(checks: list[UptimeCheck]) -> dict[str, list[Any]]:
+    latest = sorted(checks, key=lambda item: item.checked_at)[-20:]
+    return {
+        "labels": [check.checked_at.strftime("%H:%M") for check in latest],
+        "values": [check.response_time_ms or 0 for check in latest],
+    }
+
+
+def uptime_down_trend(checks: list[UptimeCheck]) -> dict[str, list[Any]]:
+    days = [
+        (datetime.now(UTC) - timedelta(days=offset)).date()
+        for offset in range(6, -1, -1)
+    ]
+    buckets = {day.isoformat(): 0 for day in days}
+    for check in checks:
+        label = _aware_datetime(check.checked_at).date().isoformat()
+        if label in buckets and not check.up:
+            buckets[label] += 1
+    return {"labels": list(buckets.keys()), "values": list(buckets.values())}
+
+
+def uptime_table_rows(sites: list[MonitoredSite]) -> list[dict[str, Any]]:
+    """Build view-oriented uptime rows with compact visual history."""
+    rows: list[dict[str, Any]] = []
+    for site in sites:
+        checks = list(site.checks)
+        last = checks[-1] if checks else None
+        history_checks = checks[-30:]
+        missing_slots = max(0, 30 - len(history_checks))
+        history = ["unknown"] * missing_slots
+        history.extend("up" if check.up else "down" for check in history_checks)
+        rows.append(
+            {
+                "site": site,
+                "last": last,
+                "history": history,
+                "status_label": _uptime_status_label(last.status_code if last else None),
+            }
+        )
+    return rows
+
+
+def _uptime_status_label(status_code: int | None) -> str:
+    if status_code is None:
+        return "-"
+    if 200 <= status_code < 400:
+        return f"{status_code} - SUCCESS"
+    if 400 <= status_code < 500:
+        return f"{status_code} - CLIENT ERROR"
+    if status_code >= 500:
+        return f"{status_code} - SERVER ERROR"
+    return str(status_code)
 
 
 def stored_report_path(scan: Scan) -> Path | None:

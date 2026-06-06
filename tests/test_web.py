@@ -6,7 +6,7 @@ import pytest
 
 from vigiscan.modules.screenshot import ScreenshotResult
 from vigiscan.web.app import create_app
-from vigiscan.web.models import Scan, User, db
+from vigiscan.web.models import Asset, MonitoredSite, Scan, User, db
 
 
 @pytest.fixture()
@@ -399,3 +399,125 @@ def test_owasp_module_requires_login_and_shows_categories(client):
     assert b"Broken Access Control" in response.data
     assert b"Mishandling of Exceptional Conditions" in response.data
     assert b"Headers, tecnologias, CVE y rutas" in response.data
+
+
+def test_user_can_register_asset(client, app):
+    login(client)
+    response = client.post(
+        "/assets",
+        data={
+            "name": "Portal clientes",
+            "asset_type": "Dominio",
+            "value": "example.com",
+            "owner": "SOC",
+            "environment": "Produccion",
+            "submit_asset": "Guardar activo",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Activo registrado." in response.data
+    assert b"Portal clientes" in response.data
+    with app.app_context():
+        asset = Asset.query.one()
+        assert asset.value == "example.com"
+        assert asset.environment == "Produccion"
+
+
+def test_user_can_add_uptime_site_and_run_manual_check(client, app, monkeypatch):
+    def fake_check_url(url):
+        return {
+            "url": url,
+            "up": True,
+            "status_code": 200,
+            "response_time_ms": 123,
+            "ssl_enabled": True,
+            "ssl_valid": True,
+            "error": None,
+        }
+
+    monkeypatch.setattr("vigiscan.web.routes.check_url", fake_check_url)
+    login(client)
+    response = client.post(
+        "/uptime",
+        data={
+            "name": "Portal",
+            "url": "https://example.com",
+            "active": "y",
+            "submit_site": "Guardar sitio",
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Sitio agregado al monitoreo." in response.data
+    assert b"En linea" in response.data
+    assert b"123.0 ms" in response.data
+
+    manual_response = client.post("/uptime/1/check", follow_redirects=True)
+    assert manual_response.status_code == 200
+    assert b"Chequeo uptime ejecutado." in manual_response.data
+    with app.app_context():
+        site = MonitoredSite.query.one()
+        assert site.uptime_percentage == 100.0
+        assert len(site.checks) == 2
+
+
+def test_user_can_configure_virustotal_and_query_reputation(
+    client,
+    app,
+    monkeypatch,
+):
+    def fake_query(target, api_key, *, kind):
+        assert api_key == "vt-secret"
+        return {
+            "enabled": True,
+            "ok": True,
+            "kind": kind,
+            "target": target,
+            "malicious": 1,
+            "suspicious": 0,
+            "harmless": 10,
+            "undetected": 2,
+            "stats": {
+                "malicious": 1,
+                "suspicious": 0,
+                "harmless": 10,
+                "undetected": 2,
+            },
+            "permalink": "https://www.virustotal.com/gui/domain/example.com",
+            "message": "Consulta completada.",
+        }
+
+    monkeypatch.setattr("vigiscan.web.routes.query_reputation", fake_query)
+    login(client)
+    settings_response = client.post(
+        "/settings",
+        data={
+            "vt-api_key": "vt-secret",
+            "vt-enabled": "y",
+            "vt-submit_vt_settings": "Guardar VirusTotal",
+        },
+        follow_redirects=True,
+    )
+
+    assert settings_response.status_code == 200
+    assert b"Configuracion de VirusTotal actualizada." in settings_response.data
+    with app.app_context():
+        admin = User.query.filter_by(username="admin").one()
+        assert admin.virustotal_enabled is True
+        assert admin.virustotal_api_key_encrypted != "vt-secret"
+
+    response = client.post(
+        "/threat-intelligence/virustotal",
+        data={
+            "target": "example.com",
+            "submit_lookup": "Consultar reputacion",
+        },
+    )
+
+    assert response.status_code == 200
+    assert b"VirusTotal Reputation" in response.data
+    assert b"example.com" in response.data
+    assert b"detecciones" in response.data

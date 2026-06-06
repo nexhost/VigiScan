@@ -35,6 +35,7 @@
         <tr>
           <th>Escaneo</th>
           <th>Objetivo</th>
+          <th>Asset</th>
           <th>Estado</th>
           <th>Score</th>
           <th>Riesgo</th>
@@ -50,6 +51,13 @@
         <tr>
           <td><a class="link-cyber" href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">#{{ scan.id }}</a></td>
           <td class="text-break">{{ scan.target_url }}</td>
+          <td>
+            {% if scan.asset %}
+            <span class="owasp-tag">{{ scan.asset.name }}</span>
+            {% else %}
+            <span class="text-secondary">-</span>
+            {% endif %}
+          </td>
           <td><span class="badge badge-muted">{{ scan.status }}</span></td>
           <td>{{ scan.score if scan.score is not none else "-" }}</td>
           <td>

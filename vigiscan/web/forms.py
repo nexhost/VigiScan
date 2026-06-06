@@ -6,7 +6,7 @@ import re
 
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
-from wtforms import BooleanField, IntegerField, PasswordField, StringField, SubmitField, URLField
+from wtforms import BooleanField, IntegerField, PasswordField, SelectField, StringField, SubmitField, URLField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, URL, ValidationError
 
 csrf = CSRFProtect()
@@ -75,3 +75,62 @@ class PasswordChangeForm(FlaskForm):
     def validate_confirm_password(self, field: PasswordField) -> None:
         if field.data != self.new_password.data:
             raise ValidationError("La confirmacion no coincide.")
+
+
+class MonitoredSiteForm(FlaskForm):
+    """Create or update an uptime monitored site."""
+
+    name = StringField("Nombre", validators=[DataRequired(), Length(max=120)])
+    url = URLField(
+        "URL",
+        validators=[DataRequired(), URL(require_tld=False), Length(max=2048)],
+    )
+    active = BooleanField("Activo", default=True)
+    submit_site = SubmitField("Guardar sitio")
+
+    def validate_url(self, field: URLField) -> None:
+        value = field.data or ""
+        if not value.lower().startswith(("http://", "https://")):
+            raise ValidationError("La URL debe comenzar con http:// o https://.")
+
+
+class AssetForm(FlaskForm):
+    """Create an asset inventory entry."""
+
+    name = StringField("Nombre", validators=[DataRequired(), Length(max=160)])
+    asset_type = SelectField(
+        "Tipo",
+        choices=[
+            ("Dominio", "Dominio"),
+            ("IP", "IP"),
+            ("Aplicacion", "Aplicacion"),
+            ("Servidor", "Servidor"),
+        ],
+    )
+    value = StringField("Valor", validators=[DataRequired(), Length(max=2048)])
+    owner = StringField("Responsable", validators=[Optional(), Length(max=160)])
+    environment = SelectField(
+        "Ambiente",
+        choices=[
+            ("Produccion", "Produccion"),
+            ("Staging", "Staging"),
+            ("Desarrollo", "Desarrollo"),
+            ("Otro", "Otro"),
+        ],
+    )
+    submit_asset = SubmitField("Guardar activo")
+
+
+class VirusTotalSettingsForm(FlaskForm):
+    """Update VirusTotal integration settings."""
+
+    api_key = PasswordField("VirusTotal API Key", validators=[Optional(), Length(max=255)])
+    enabled = BooleanField("Activar integracion")
+    submit_vt_settings = SubmitField("Guardar VirusTotal")
+
+
+class VirusTotalLookupForm(FlaskForm):
+    """Run a VirusTotal reputation lookup."""
+
+    target = StringField("URL, dominio o IP", validators=[DataRequired(), Length(max=2048)])
+    submit_lookup = SubmitField("Consultar reputacion")

@@ -244,6 +244,8 @@ def render_html(report: ReportDocument) -> str:
     screenshot_html = _render_html_screenshot(report.get("screenshot"))
     owasp_html = _render_html_owasp(report.get("owasp_findings"))
     alerts_html = _render_html_alerts(report["modules"].get("passive_scan"))
+    charts_html = _render_html_report_charts(report)
+    chart_data_json = json.dumps(_report_chart_data(report), ensure_ascii=False)
 
     return f"""<!doctype html>
 <html lang="es">
@@ -411,6 +413,21 @@ def render_html(report: ReportDocument) -> str:
       color: var(--accent);
       overflow-wrap: anywhere;
     }}
+    .report-chart-grid {{
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }}
+    .report-chart-card {{
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 280px;
+      padding: 14px;
+    }}
+    .report-chart-card canvas {{
+      height: 220px !important;
+      width: 100% !important;
+    }}
     footer {{
       color: var(--muted);
       text-align: center;
@@ -420,6 +437,7 @@ def render_html(report: ReportDocument) -> str:
     ul {{ padding-left: 20px; }}
     @media (max-width: 780px) {{
       .grid {{ grid-template-columns: 1fr; }}
+      .report-chart-grid {{ grid-template-columns: 1fr; }}
       .detail-grid {{ grid-template-columns: 1fr; }}
       .shell {{ padding: 22px 14px 36px; }}
     }}
@@ -459,6 +477,7 @@ def render_html(report: ReportDocument) -> str:
     </div>
 
     {screenshot_html}
+    {charts_html}
     {owasp_html}
     {alerts_html}
     {modules_html}
@@ -466,8 +485,36 @@ def render_html(report: ReportDocument) -> str:
       <h2>Exportacion JSON</h2>
       <p>El mismo reporte puede descargarse en JSON desde VigiScan Web para auditoria y trazabilidad.</p>
     </section>
-    <footer>© 2026 VigiScan. {DEVELOPER_CREDIT}.</footer>
+    <footer>&copy; 2026 VigiScan. {DEVELOPER_CREDIT}.</footer>
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script>
+    const reportChartData = {chart_data_json};
+    if (window.Chart) {{
+      Chart.defaults.color = "#607080";
+      Chart.defaults.borderColor = "#d8dee6";
+      const makeBar = (id, data, color) => new Chart(document.getElementById(id), {{
+        type: "bar",
+        data: {{
+          labels: data.labels,
+          datasets: [{{
+            data: data.values,
+            backgroundColor: color,
+            borderRadius: 8
+          }}]
+        }},
+        options: {{
+          maintainAspectRatio: false,
+          scales: {{ y: {{ beginAtZero: true, ticks: {{ precision: 0 }} }} }},
+          plugins: {{ legend: {{ display: false }} }}
+        }}
+      }});
+      makeBar("reportSeverityChart", reportChartData.severity, "#b42318");
+      makeBar("reportOwaspChart", reportChartData.owasp, "#0f766e");
+      makeBar("reportCveChart", reportChartData.cves, "#b54708");
+      makeBar("reportTechChart", reportChartData.technologies, "#2563eb");
+    }}
+  </script>
 </body>
 </html>
 """
@@ -759,6 +806,89 @@ def _render_html_alerts(passive_scan: Any) -> str:
         ),
     )
     return f"<section><h2>Hallazgos por severidad</h2>{rows}</section>"
+
+
+def _render_html_report_charts(report: ReportDocument) -> str:
+    return """
+    <section>
+      <h2>Graficas ejecutivas</h2>
+      <div class="report-chart-grid">
+        <div class="report-chart-card">
+          <h3>Severidad</h3>
+          <canvas id="reportSeverityChart" aria-label="Hallazgos por severidad"></canvas>
+        </div>
+        <div class="report-chart-card">
+          <h3>OWASP Top 10 2025</h3>
+          <canvas id="reportOwaspChart" aria-label="Categorias OWASP"></canvas>
+        </div>
+        <div class="report-chart-card">
+          <h3>CVE por severidad</h3>
+          <canvas id="reportCveChart" aria-label="CVE por severidad"></canvas>
+        </div>
+        <div class="report-chart-card">
+          <h3>Tecnologias</h3>
+          <canvas id="reportTechChart" aria-label="Tecnologias detectadas"></canvas>
+        </div>
+      </div>
+    </section>
+    """
+
+
+def _report_chart_data(report: ReportDocument) -> dict[str, dict[str, list[Any]]]:
+    modules = report.get("modules", {})
+    passive_scan = modules.get("passive_scan") if isinstance(modules, dict) else None
+    alerts = (
+        _as_dicts(passive_scan.get("alerts"))
+        if isinstance(passive_scan, dict)
+        else []
+    )
+    cve_report = modules.get("cve_checker") if isinstance(modules, dict) else None
+    tech_report = modules.get("tech_detect") if isinstance(modules, dict) else None
+    return {
+        "severity": _count_chart(
+            [item.get("severity") for item in alerts],
+            ["Critical", "High", "Medium", "Low", "Informational"],
+        ),
+        "owasp": _count_chart(
+            [item.get("category_id") for item in _as_dicts(report.get("owasp_findings"))],
+            [],
+        ),
+        "cves": _count_chart(
+            [
+                item.get("severity") or "Unknown"
+                for item in _as_dicts(
+                    cve_report.get("matches") if isinstance(cve_report, dict) else None
+                )
+            ],
+            [],
+        ),
+        "technologies": _count_chart(
+            [
+                item.get("name")
+                for item in _as_dicts(
+                    tech_report.get("technologies")
+                    if isinstance(tech_report, dict)
+                    else None
+                )
+            ],
+            [],
+        ),
+    }
+
+
+def _count_chart(values: list[Any], preferred_labels: list[str]) -> dict[str, list[Any]]:
+    counts = {label: 0 for label in preferred_labels}
+    for value in values:
+        label = str(value) if value else "-"
+        counts[label] = counts.get(label, 0) + 1
+    items = (
+        [(label, counts[label]) for label in preferred_labels]
+        if preferred_labels
+        else sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:10]
+    )
+    if not items:
+        items = [("Sin datos", 0)]
+    return {"labels": [item[0] for item in items], "values": [item[1] for item in items]}
 
 
 def _inline_report_logo() -> str:

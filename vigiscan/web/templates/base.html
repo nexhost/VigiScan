@@ -35,6 +35,18 @@
           <span class="nav-icon">R</span>
           Reportes
         </a>
+        <a class="{% if request.endpoint == 'main.assets' %}active{% endif %}" href="{{ url_for('main.assets') }}">
+          <span class="nav-icon">A</span>
+          Assets
+        </a>
+        <a class="{% if request.endpoint in ['main.uptime', 'main.uptime_check'] %}active{% endif %}" href="{{ url_for('main.uptime') }}">
+          <span class="nav-icon">U</span>
+          Uptime Monitor
+        </a>
+        <a class="{% if request.endpoint == 'main.virustotal' %}active{% endif %}" href="{{ url_for('main.virustotal') }}">
+          <span class="nav-icon">T</span>
+          Threat Intelligence
+        </a>
         <a class="{% if request.endpoint == 'main.owasp' %}active{% endif %}" href="{{ url_for('main.owasp') }}">
           <span class="nav-icon">O</span>
           OWASP Top 10
@@ -81,7 +93,7 @@
       {% endfor %}
     {% endwith %}
     {% block content %}{% endblock %}
-    <footer class="app-footer">© 2026 VigiScan. Desarrollado por Kendry Rosario.</footer>
+    <footer class="app-footer">&copy; 2026 VigiScan. Desarrollado por Kendry Rosario.</footer>
   </main>
   {% if current_user.is_authenticated %}
     </div>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
         VIGISCAN_ADMIN_USERNAME=os.environ.get("VIGISCAN_ADMIN_USERNAME", "admin"),
         VIGISCAN_ADMIN_PASSWORD=os.environ.get("VIGISCAN_ADMIN_PASSWORD", "admin"),
         VIGISCAN_REPORT_DIR=os.environ.get("VIGISCAN_REPORT_DIR", "reports"),
+        VIGISCAN_UPTIME_SCHEDULER=True,
         WTF_CSRF_TIME_LIMIT=None,
     )
     if config:
@@ -46,13 +48,42 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
         with app.app_context():
             init_database()
 
+    start_uptime_scheduler(app)
     return app
+
+
+def start_uptime_scheduler(app: Flask) -> None:
+    """Start the optional uptime scheduler for production-like runs."""
+    if app.config.get("TESTING") or not app.config.get("VIGISCAN_UPTIME_SCHEDULER"):
+        return
+    if getattr(app, "_vigiscan_uptime_scheduler_started", False):
+        return
+    app._vigiscan_uptime_scheduler_started = True  # type: ignore[attr-defined]
+
+    def worker() -> None:
+        stop = threading.Event()
+        while not stop.wait(300):
+            with app.app_context():
+                try:
+                    from vigiscan.web.routes import run_due_uptime_checks
+
+                    run_due_uptime_checks()
+                except Exception:
+                    app.logger.exception("Uptime scheduler failed")
+
+    thread = threading.Thread(
+        target=worker,
+        name="vigiscan-uptime-scheduler",
+        daemon=True,
+    )
+    thread.start()
 
 
 def init_database() -> None:
     """Create database tables and ensure the initial administrator exists."""
     db.create_all()
     _ensure_user_profile_columns()
+    _ensure_scan_asset_column()
     username = str(current_app.config["VIGISCAN_ADMIN_USERNAME"])
     password = str(current_app.config["VIGISCAN_ADMIN_PASSWORD"])
     admin = User.query.filter_by(username=username).first()
@@ -73,11 +104,28 @@ def _ensure_user_profile_columns() -> None:
         "email": "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
         "display_name": "ALTER TABLE users ADD COLUMN display_name VARCHAR(120)",
         "last_login_at": "ALTER TABLE users ADD COLUMN last_login_at DATETIME",
+        "virustotal_api_key_encrypted": (
+            "ALTER TABLE users ADD COLUMN virustotal_api_key_encrypted TEXT"
+        ),
+        "virustotal_enabled": (
+            "ALTER TABLE users ADD COLUMN virustotal_enabled BOOLEAN DEFAULT 0 NOT NULL"
+        ),
     }
     for column, statement in migrations.items():
         if column not in existing:
             db.session.execute(text(statement))
     db.session.commit()
+
+
+def _ensure_scan_asset_column() -> None:
+    """Add nullable scan-to-asset relation for existing SQLite installations."""
+    inspector = inspect(db.engine)
+    if "scans" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("scans")}
+    if "asset_id" not in existing:
+        db.session.execute(text("ALTER TABLE scans ADD COLUMN asset_id INTEGER"))
+        db.session.commit()
 
 
 def main() -> None:

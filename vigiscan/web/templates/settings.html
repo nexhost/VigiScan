@@ -72,6 +72,32 @@
       {{ password_form.submit_password(class="btn btn-cyber") }}
     </form>
   </div>
+
+  <div class="glass-panel animate-in delay-3">
+    <div class="panel-heading">
+      <span>Threat Intelligence</span>
+      <small>VirusTotal opcional</small>
+    </div>
+    <form method="post" novalidate>
+      {{ vt_form.hidden_tag() }}
+      <div class="audit-note">
+        La clave se guarda protegida localmente y solo se usa cuando la integracion
+        esta activa.
+      </div>
+      <div class="mb-3">
+        {{ vt_form.api_key.label(class="form-label") }}
+        {{ vt_form.api_key(class="form-control cyber-input", autocomplete="off", placeholder="Pega una nueva clave para actualizarla") }}
+        {% for error in vt_form.api_key.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <label class="scan-option mb-3">
+        {{ vt_form.enabled() }}
+        {{ vt_form.enabled.label.text }}
+      </label>
+      {{ vt_form.submit_vt_settings(class="btn btn-cyber") }}
+    </form>
+  </div>
 </section>
 
 <section class="metric-grid">

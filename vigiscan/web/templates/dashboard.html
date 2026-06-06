@@ -69,6 +69,42 @@
     <div class="metric-value">{{ dashboard_stats.unique_technologies }}</div>
     <div class="metric-caption">Fingerprinting</div>
   </div>
+  <div class="metric-card animate-in">
+    <div class="metric-label">Assets</div>
+    <div class="metric-value">{{ platform_stats.asset_count }}</div>
+    <div class="metric-caption">Inventario registrado</div>
+  </div>
+  <div class="metric-card animate-in delay-1">
+    <div class="metric-label">Monitores uptime</div>
+    <div class="metric-value">{{ platform_stats.monitored_sites }}</div>
+    <div class="metric-caption">Chequeo cada 5 min</div>
+  </div>
+  <div class="metric-card metric-low animate-in delay-2">
+    <div class="metric-label">Uptime promedio</div>
+    <div class="metric-value">{{ platform_stats.average_uptime }}%</div>
+    <div class="metric-caption">Sitios con historial</div>
+    <div class="risk-signal risk-low"></div>
+  </div>
+  <div class="metric-card metric-high animate-in delay-3">
+    <div class="metric-label">Atencion operativa</div>
+    <div class="metric-value">{{ platform_stats.down_sites + platform_stats.ssl_attention }}</div>
+    <div class="metric-caption">Caidas o SSL a revisar</div>
+    <div class="risk-signal risk-high"></div>
+  </div>
+</section>
+
+<section class="glass-panel soc-map-panel animate-in delay-1">
+  <div>
+    <span class="eyebrow">Global visibility</span>
+    <h2>Mapa SOC de exposicion</h2>
+    <p>Resumen visual de activos, monitores y hallazgos para priorizar investigacion defensiva.</p>
+  </div>
+  <div class="soc-map" aria-label="Mapa operativo global">
+    <span class="map-node node-east"></span>
+    <span class="map-node node-west"></span>
+    <span class="map-node node-south"></span>
+    <span class="map-node node-eu"></span>
+  </div>
 </section>
 
 <section class="row g-4 mb-4">

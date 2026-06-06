@@ -43,6 +43,16 @@
     <div class="metric-label">Fecha</div>
     <div class="metric-date">{{ (scan.completed_at or scan.created_at).strftime("%Y-%m-%d %H:%M") }}</div>
   </div>
+  <div class="metric-card animate-in">
+    <div class="metric-label">Asset relacionado</div>
+    {% if scan.asset %}
+    <div class="metric-date">{{ scan.asset.name }}</div>
+    <div class="metric-caption text-break">{{ scan.asset.value }}</div>
+    {% else %}
+    <div class="metric-date">-</div>
+    <div class="metric-caption">Sin relacion automatica</div>
+    {% endif %}
+  </div>
 </section>
 
 {% if scan.error_message %}
