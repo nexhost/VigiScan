@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Inteligencia de Amenazas - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Threat Intelligence</span>
+    <h1>Inteligencia de amenazas</h1>
+    <p>Monitoreo de IOC, correlacion de incidentes y conectores de inteligencia.</p>
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-cyber" href="{{ url_for('main.iocs') }}">Ver IOCs</a>
+    <a class="btn btn-glow" href="{{ url_for('main.virustotal') }}">VirusTotal</a>
+  </div>
+</section>
+
+<section class="dashboard-section-title animate-in delay-1">
+  <span class="eyebrow">Threat Intel Overview</span>
+  <h2>Resumen de fuentes y datos recientes</h2>
+</section>
+
+<section class="glass-panel animate-in delay-1">
+  <div class="panel-row">
+    <div class="panel-block">
+      <h3>Estado de conectores</h3>
+      <div class="list-group">
+        {% for connector in connector_status %}
+        <div class="list-group-item">
+          <strong>{{ connector.name }}</strong>
+          <span class="badge bg-secondary ms-2">{{ connector.status }}</span>
+          <p class="mb-0">{{ connector.description }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="panel-block">
+      <h3>Indicadores recientes</h3>
+      <ul class="list-group">
+        {% for indicator in recent_iocs %}
+        <li class="list-group-item">{{ indicator.value }} — {{ indicator.type or 'IOC' }}</li>
+        {% else %}
+        <li class="list-group-item">No hay indicadores recientes.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="glass-panel animate-in delay-2">
+  <div class="panel-heading">
+    <span class="eyebrow">Metrics</span>
+    <h2>Indicadores clave</h2>
+  </div>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Activos</div>
+      <div class="metric-value">{{ total_assets }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">IOCs totales</div>
+      <div class="metric-value">{{ total_iocs }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Sitios monitoreados</div>
+      <div class="metric-value">{{ monitored_sites }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="glass-panel animate-in delay-3">
+  <div class="panel-heading">
+    <span class="eyebrow">VirusTotal</span>
+    <h2>Último resultado</h2>
+  </div>
+  {% if vt_latest %}
+  <div class="panel-content">
+    <p><strong>Última consulta:</strong> {{ vt_latest.queried_at.strftime('%Y-%m-%d %H:%M') if vt_latest.queried_at else 'N/A' }}</p>
+    <p><strong>Resumen:</strong> {{ vt_latest.summary or 'Sin resumen disponible.' }}</p>
+  </div>
+  {% else %}
+  <div class="panel-content">
+    <p>No hay datos de VirusTotal disponibles.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

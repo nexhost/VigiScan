@@ -19,20 +19,14 @@
         <span>Vista global</span>
         <small>{% if external_enabled and threat_map_url %}Fuente externa configurada{% else %}Visualizacion demostrativa{% endif %}</small>
       </div>
-      {% if external_enabled and threat_map_url %}
-      <iframe class="threat-map-frame" src="{{ threat_map_url }}" title="Threat Map externo" loading="lazy" referrerpolicy="no-referrer"></iframe>
-      <div class="audit-note mt-3">Si el proveedor bloquea iframe, abre la fuente en una pestana externa: <a class="link-cyber" href="{{ threat_map_url }}" target="_blank" rel="noopener noreferrer">{{ threat_map_url }}</a></div>
-      {% else %}
-      <div class="threat-map-canvas" aria-label="Visualizacion demostrativa de amenazas">
-        <span class="threat-pulse" style="--x: 18%; --y: 44%;"></span>
-        <span class="threat-pulse" style="--x: 54%; --y: 38%;"></span>
-        <span class="threat-pulse" style="--x: 76%; --y: 58%;"></span>
-        <span class="threat-arc" style="--x: 20%; --y: 42%; --r: -18deg;"></span>
-        <span class="threat-arc" style="--x: 42%; --y: 28%; --r: 24deg;"></span>
-        <span class="threat-arc" style="--x: 52%; --y: 55%; --r: -34deg;"></span>
+      <iframe class="threat-map-frame" src="{{ threat_map_url }}" title="Threat Map" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      <div class="audit-note mt-3">
+        {% if external_enabled %}
+        Si el proveedor bloquea iframe, abre la fuente en una pestaña externa: <a class="link-cyber" href="{{ threat_map_url }}" target="_blank" rel="noopener noreferrer">{{ threat_map_url }}</a>
+        {% else %}
+        Mapa interactivo Kaspersky integrado. Si el iframe falla, abre la fuente directamente: <a class="link-cyber" href="{{ threat_map_url }}" target="_blank" rel="noopener noreferrer">{{ threat_map_url }}</a>
+        {% endif %}
       </div>
-      <div class="audit-note mt-3">Visualizacion demostrativa: no representa telemetria real hasta configurar una fuente externa.</div>
-      {% endif %}
     </div>
   </div>
   <div class="col-xl-4">

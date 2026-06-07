@@ -57,6 +57,7 @@ from vigiscan.modules.virustotal import (
 from vigiscan.modules.waf_detect import detect_waf
 from vigiscan.web.i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES
 from vigiscan.web.forms import (
+    ApiAccessForm,
     AssetForm,
     DomainLookupForm,
     IndicatorForm,
@@ -72,6 +73,7 @@ from vigiscan.web.forms import (
 )
 from vigiscan.web.models import (
     Asset,
+    AuditLog,
     InfrastructureHost,
     InfrastructureMetric,
     Indicator,
@@ -228,6 +230,7 @@ def settings():
     profile_form = ProfileForm(prefix="profile")
     password_form = PasswordChangeForm(prefix="password")
     vt_form = VirusTotalSettingsForm(prefix="vt")
+    api_form = ApiAccessForm(prefix="api")
     regional_form = RegionalSettingsForm(prefix="regional")
     settings_record = get_system_settings()
 
@@ -237,6 +240,7 @@ def settings():
         vt_form.enabled.data = bool(current_user.virustotal_enabled)
         vt_form.rate_limit_per_minute.data = current_user.virustotal_rate_limit_per_minute
         vt_form.cache_enabled.data = bool(current_user.virustotal_cache_enabled)
+        api_form.api_token.data = current_user.api_token or ""
         regional_form.country.data = settings_record.country
         regional_form.country_code.data = settings_record.country_code
         regional_form.timezone.data = settings_record.timezone
@@ -287,6 +291,12 @@ def settings():
         flash("Configuracion de VirusTotal actualizada.", "success")
         return redirect(url_for("main.settings"))
 
+    if api_form.submit_api_token.data and api_form.validate_on_submit():
+        current_user.api_token = (api_form.api_token.data or "").strip() or None
+        db.session.commit()
+        flash("Token API actualizado.", "success")
+        return redirect(url_for("main.settings"))
+
     if (
         regional_form.submit_regional_settings.data
         and regional_form.validate_on_submit()
@@ -322,6 +332,7 @@ def settings():
         profile_form=profile_form,
         password_form=password_form,
         vt_form=vt_form,
+        api_form=api_form,
         regional_form=regional_form,
         system_settings=settings_record,
         vt_key_hint=masked_api_key(
@@ -674,12 +685,76 @@ def infrastructure_delete(host_id: int):
 @login_required
 def threat_map():
     settings_record = get_system_settings()
+    default_map_url = "https://cybermap.kaspersky.com/"
+    external_enabled = bool(
+        settings_record.threat_map_external_enabled and settings_record.threat_map_url
+    )
+    threat_map_url = (
+        settings_record.threat_map_url if external_enabled else default_map_url
+    )
     return render_template(
         "threat_map.html",
-        threat_map_url=settings_record.threat_map_url,
-        external_enabled=bool(settings_record.threat_map_external_enabled),
+        threat_map_url=threat_map_url,
+        external_enabled=external_enabled,
+        default_map=not external_enabled,
         events=demo_threat_events(),
     )
+
+
+@bp.route("/superficie-ataque", methods=("GET", "POST"))
+@bp.route("/attack-surface", methods=("GET", "POST"))
+@login_required
+def attack_surface():
+    form = DomainLookupForm()
+    ssl_result = None
+    if form.validate_on_submit():
+        ssl_result = analyze_tls(form.target.data.strip())
+    assets = Asset.query.order_by(Asset.created_at.desc()).all()
+    technology_counts = detected_technology_counts(limit=12)
+    dns_summary = build_dns_dashboard_summary()
+    certificates = [
+        site for site in MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()
+        if site.ssl_enabled
+    ]
+    return render_template(
+        "attack_surface.html",
+        form=form,
+        assets=assets,
+        technology_counts=technology_counts,
+        dns_summary=dns_summary,
+        certificates=certificates,
+        ssl_result=ssl_result,
+    )
+
+
+@bp.get("/threat-intelligence")
+@bp.get("/threat-intel")
+@login_required
+def threat_intelligence():
+    vt_latest = VirusTotalResult.query.order_by(VirusTotalResult.queried_at.desc()).first()
+    recent_iocs = Indicator.query.order_by(Indicator.created_at.desc()).limit(10).all()
+    connector_status = [
+        {"name": "OpenCTI", "status": "Preparado", "description": "Integracion en preparacion."},
+        {"name": "MISP", "status": "Preparado", "description": "Integracion en preparacion."},
+        {"name": "AbuseIPDB", "status": "Pendiente", "description": "Consulta de IPs listo para habilitar."},
+        {"name": "Shodan", "status": "Pendiente", "description": "Consulta de puertos, servicios y vulnerabilidades."},
+    ]
+    return render_template(
+        "threat_intelligence.html",
+        vt_latest=vt_latest,
+        recent_iocs=recent_iocs,
+        connector_status=connector_status,
+        total_assets=Asset.query.count(),
+        total_iocs=Indicator.query.count(),
+        monitored_sites=MonitoredSite.query.count(),
+    )
+
+
+@bp.get("/audit-logs")
+@login_required
+def audit_logs():
+    logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(200).all()
+    return render_template("audit_logs.html", logs=logs)
 
 
 @bp.get("/api/dashboard/summary")
@@ -768,6 +843,74 @@ def api_infrastructure_history():
     ).limit(100).all()
     history.reverse()
     return jsonify(metrics_history_to_chart(history))
+
+
+def resolve_api_user() -> User | None:
+    user = authenticate_api_request()
+    if user:
+        return user
+    if current_user.is_authenticated:
+        return current_user
+    return None
+
+
+@bp.get("/api/scans")
+def api_scans():
+    user = resolve_api_user()
+    if user is None:
+        return api_unauthorized()
+    return jsonify({"scans": [scan_to_dict(scan) for scan in Scan.query.order_by(Scan.created_at.desc()).all()]})
+
+
+@bp.get("/api/assets")
+def api_assets():
+    user = resolve_api_user()
+    if user is None:
+        return api_unauthorized()
+    return jsonify({"assets": [asset_to_dict(asset) for asset in Asset.query.order_by(Asset.created_at.desc()).all()]})
+
+
+@bp.get("/api/iocs")
+def api_iocs():
+    user = resolve_api_user()
+    if user is None:
+        return api_unauthorized()
+    return jsonify({"iocs": [indicator_to_dict(indicator) for indicator in Indicator.query.order_by(Indicator.created_at.desc()).all()]})
+
+
+@bp.get("/api/reports")
+def api_reports():
+    user = resolve_api_user()
+    if user is None:
+        return api_unauthorized()
+    return jsonify({
+        "reports": [
+            {
+                **scan_to_dict(scan),
+                "report_data": scan.report_data,
+                "report_path": scan.report_path,
+            }
+            for scan in Scan.query.order_by(Scan.created_at.desc()).all()
+        ]
+    })
+
+
+@bp.get("/api/uptime")
+def api_uptime():
+    user = resolve_api_user()
+    if user is None:
+        return api_unauthorized()
+    return jsonify({"uptime": [monitored_site_to_dict(site) for site in MonitoredSite.query.order_by(MonitoredSite.created_at.desc()).all()]})
+
+
+@bp.get("/api/infrastructure")
+def api_infrastructure():
+    user = resolve_api_user()
+    if user is None:
+        return api_unauthorized()
+    return jsonify({
+        "hosts": [infrastructure_host_to_dict(host) for host in InfrastructureHost.query.order_by(InfrastructureHost.created_at.desc()).all()]
+    })
 
 
 @bp.route("/assets", methods=("GET", "POST"))
@@ -1053,6 +1196,121 @@ def local_datetime(value: datetime | None) -> str:
         timezone = UTC
     aware = _aware_datetime(value).astimezone(timezone)
     return aware.strftime(settings_record.date_format)
+
+
+def authenticate_api_request() -> User | None:
+    """Authenticate REST API requests with a user API token."""
+    auth_header = request.headers.get("Authorization", "")
+    api_token = ""
+    if auth_header.startswith("Bearer "):
+        api_token = auth_header[7:].strip()
+    if not api_token:
+        api_token = request.args.get("api_token", "").strip()
+    if not api_token:
+        return None
+    return User.query.filter_by(api_token=api_token).first()
+
+
+def api_unauthorized() -> Response:
+    return jsonify({"error": "Unauthorized"}), 401
+
+
+def scan_to_dict(scan: Scan) -> dict[str, Any]:
+    return {
+        "id": scan.id,
+        "target_url": scan.target_url,
+        "status": scan.status,
+        "score": scan.score,
+        "risk_level": scan.risk_level,
+        "summary": scan.summary,
+        "created_at": scan.created_at.isoformat(),
+        "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,
+        "report_data": scan.report_data,
+    }
+
+
+def asset_to_dict(asset: Asset) -> dict[str, Any]:
+    return {
+        "id": asset.id,
+        "name": asset.name,
+        "asset_type": asset.asset_type,
+        "value": asset.value,
+        "domain": asset.domain,
+        "ip_address": asset.ip_address,
+        "url": asset.url,
+        "owner": asset.owner,
+        "criticality": asset.criticality,
+        "status": asset.status,
+        "technology": asset.technology,
+        "environment": asset.environment,
+        "notes": asset.notes,
+        "created_at": asset.created_at.isoformat(),
+    }
+
+
+def monitored_site_to_dict(site: MonitoredSite) -> dict[str, Any]:
+    latest_check = site.checks[-1] if site.checks else None
+    return {
+        "id": site.id,
+        "name": site.name,
+        "url": site.url,
+        "environment": site.environment,
+        "responsible": site.responsible,
+        "criticality": site.criticality,
+        "active": site.active,
+        "ssl_enabled": site.ssl_enabled,
+        "uptime_percentage": site.uptime_percentage,
+        "avg_response_time": site.avg_response_time,
+        "last_check": latest_check.checked_at.isoformat() if latest_check else None,
+        "last_status": latest_check.status if latest_check else None,
+        "last_up": latest_check.up if latest_check else None,
+    }
+
+
+def infrastructure_host_to_dict(host: InfrastructureHost) -> dict[str, Any]:
+    latest_metric = host.metrics[-1] if host.metrics else None
+    return {
+        "id": host.id,
+        "name": host.name,
+        "ip_address": host.ip_address,
+        "hostname": host.hostname,
+        "operating_system": host.operating_system,
+        "environment": host.environment,
+        "responsible": host.responsible,
+        "criticality": host.criticality,
+        "monitor_method": host.monitor_method,
+        "active": host.active,
+        "latest_metric": {
+            "cpu_percent": latest_metric.cpu_percent if latest_metric else None,
+            "memory_percent": latest_metric.memory_percent if latest_metric else None,
+            "disk_percent": latest_metric.disk_percent if latest_metric else None,
+            "uptime": latest_metric.uptime if latest_metric else None,
+            "status": latest_metric.status if latest_metric else None,
+            "collected_at": latest_metric.collected_at.isoformat() if latest_metric else None,
+        },
+        "created_at": host.created_at.isoformat(),
+        "updated_at": host.updated_at.isoformat(),
+    }
+
+
+def record_audit_event(
+    user: User | None,
+    event_type: str,
+    details: str | None = None,
+    target_type: str | None = None,
+    target_id: int | None = None,
+) -> None:
+    audit = AuditLog(
+        user_id=user.id if user else None,
+        username=user.username if user else None,
+        event_type=event_type,
+        target_type=target_type,
+        target_id=target_id,
+        details=details,
+        source=request.remote_addr or "local",
+    )
+    db.session.add(audit)
+    db.session.commit()
 
 
 def build_pdf_report_context(scan: Scan) -> dict[str, Any]:

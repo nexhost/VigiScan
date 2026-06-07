@@ -47,6 +47,10 @@
             <span class="nav-icon">RP</span>
             <span class="nav-label">{{ t("reports") }}</span>
           </a>
+          <a class="{% if request.endpoint in ['main.attack_surface'] %}active{% endif %}" href="{{ url_for('main.attack_surface') }}" title="{{ t('attack_surface') }}">
+            <span class="nav-icon">AS</span>
+            <span class="nav-label">{{ t("attack_surface") }}</span>
+          </a>
         </div>
         <div class="nav-section">
           <span class="nav-section-title">Monitoreo</span>
@@ -77,6 +81,10 @@
             <span class="nav-icon">IO</span>
             <span class="nav-label">{{ t("ioc_center") }}</span>
           </a>
+          <a class="{% if request.endpoint in ['main.threat_intelligence', 'main.virustotal'] %}active{% endif %}" href="{{ url_for('main.threat_intelligence') }}" title="{{ t('threat_intelligence_center') }}">
+            <span class="nav-icon">TI</span>
+            <span class="nav-label">{{ t("threat_intelligence_center") }}</span>
+          </a>
           <a class="{% if request.endpoint == 'main.virustotal' %}active{% endif %}" href="{{ url_for('main.virustotal') }}" title="{{ t('threat_intelligence') }} / {{ t('virustotal') }}">
             <span class="nav-icon">VT</span>
             <span class="nav-label">{{ t("threat_intelligence") }} / {{ t("virustotal") }}</span>
@@ -89,6 +97,10 @@
             <span class="nav-icon">TM</span>
             <span class="nav-label">Mapa de ciberamenazas</span>
           </a>
+          <a class="{% if request.endpoint == 'main.audit_logs' %}active{% endif %}" href="{{ url_for('main.audit_logs') }}" title="{{ t('audit_logs') }}">
+            <span class="nav-icon">AL</span>
+            <span class="nav-label">{{ t('audit_logs') }}</span>
+          </a>
         </div>
         <div class="nav-section">
           <span class="nav-section-title">Sistema</span>
@@ -96,22 +108,18 @@
             <span class="nav-icon">CF</span>
             <span class="nav-label">{{ t("settings") }}</span>
           </a>
-          <a href="{{ url_for('main.settings') }}#idioma" title="{{ t('language') }}">
-            <span class="nav-icon">ES</span>
-            <span class="nav-label">{{ t("language") }}</span>
-          </a>
-          <form class="sidebar-logout-form" method="post" action="{{ url_for('main.logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="sidebar-logout-button" type="submit" title="{{ t('logout') }}">
-              <span class="nav-icon">SL</span>
-              <span class="nav-label">{{ t("logout") }}</span>
-            </button>
-          </form>
         </div>
       </nav>
       <div class="sidebar-status">
         <div><span class="pulse-dot"></span><span class="nav-label">Sensor web activo</span></div>
         <small class="nav-label">Version VigiScan</small>
+        <form class="sidebar-logout-form" method="post" action="{{ url_for('main.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="sidebar-logout-button" type="submit" title="{{ t('logout') }}">
+            <span class="nav-icon">SL</span>
+            <span class="nav-label">{{ t("logout") }}</span>
+          </button>
+        </form>
       </div>
     </aside>
 

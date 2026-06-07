@@ -110,6 +110,27 @@
     </form>
   </div>
 
+  <div class="glass-panel animate-in delay-3">
+    <div class="panel-heading">
+      <span>API Access</span>
+      <small>Token REST</small>
+    </div>
+    <form method="post" novalidate>
+      {{ api_form.hidden_tag() }}
+      <div class="mb-3">
+        {{ api_form.api_token.label(class="form-label") }}
+        {{ api_form.api_token(class="form-control cyber-input", autocomplete="off", placeholder="Ingresa o actualiza el token API") }}
+        {% for error in api_form.api_token.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <div class="audit-note">
+        Usa este token para autenticar peticiones REST via Authorization Bearer.
+      </div>
+      {{ api_form.submit_api_token(class="btn btn-cyber") }}
+    </form>
+  </div>
+
   <div class="glass-panel animate-in">
     <div class="panel-heading">
       <span>Configuracion Regional</span>

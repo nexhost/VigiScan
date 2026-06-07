@@ -28,6 +28,8 @@ class User(UserMixin, db.Model):
         default="es",
         nullable=False,
     )
+    role: Mapped[str] = mapped_column(String(32), default="Administrador", nullable=False)
+    api_token: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     virustotal_api_key_encrypted: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -58,6 +60,7 @@ class User(UserMixin, db.Model):
         nullable=True,
     )
     scans: Mapped[list["Scan"]] = relationship(back_populates="user")
+    audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user")
 
     def set_password(self, password: str) -> None:
         """Store a secure password hash."""
@@ -359,3 +362,24 @@ class VirusTotalResult(db.Model):
         nullable=False,
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AuditLog(db.Model):
+    """Audit log entry for user and system events."""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    username: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    target_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    target_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    details: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    user: Mapped[User | None] = relationship(back_populates="audit_logs")

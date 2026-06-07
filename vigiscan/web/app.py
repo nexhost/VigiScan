@@ -137,6 +137,12 @@ def _ensure_user_profile_columns() -> None:
             "ALTER TABLE users ADD COLUMN virustotal_cache_enabled "
             "BOOLEAN DEFAULT 1 NOT NULL"
         ),
+        "role": (
+            "ALTER TABLE users ADD COLUMN role VARCHAR(32) DEFAULT 'Administrador' NOT NULL"
+        ),
+        "api_token": (
+            "ALTER TABLE users ADD COLUMN api_token VARCHAR(255)"
+        ),
     }
     for column, statement in migrations.items():
         if column not in existing:

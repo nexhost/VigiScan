@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Superficie de Ataque - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">ASM</span>
+    <h1>Superficie de Ataque</h1>
+    <p>Inventario de activos, dominios, certificados SSL y exposicion externa.</p>
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-cyber" href="{{ url_for('main.assets') }}">Ver activos</a>
+    <a class="btn btn-glow" href="{{ url_for('main.domain_dns') }}">Ver DNS</a>
+  </div>
+</section>
+
+<section class="dashboard-section-title animate-in delay-1">
+  <span class="eyebrow">Asset Intelligence</span>
+  <h2>Visibilidad de la superficie de ataque</h2>
+</section>
+
+<section class="glass-panel animate-in delay-1">
+  <div class="panel-row">
+    <div class="panel-block">
+      <h3>Top activos</h3>
+      <p>Activos detectados y clasificados por riesgo.</p>
+      <ul class="list-group">
+        {% for asset in assets[:8] %}
+        <li class="list-group-item">{{ asset.name or asset.ip_address or asset.host }} - {{ asset.status or 'Desconocido' }}</li>
+        {% else %}
+        <li class="list-group-item">No hay activos registrados.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="panel-block">
+      <h3>Tecnologías detectadas</h3>
+      <div class="chart-legend">
+        {% for tech in technology_counts %}
+        <div class="legend-item">
+          <span class="legend-marker"></span> {{ tech.name }} ({{ tech.count }})
+        </div>
+        {% else %}
+        <p>No se han detectado tecnologías.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="glass-panel animate-in delay-2">
+  <div class="panel-heading">
+    <div>
+      <span class="eyebrow">SSL / TLS</span>
+      <h2>Analizar certificado</h2>
+    </div>
+  </div>
+  <form method="post" class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-md-8">
+      {{ form.target.label(class="form-label") }}
+      {{ form.target(class="form-control") }}
+    </div>
+    <div class="col-md-4 align-self-end">
+      {{ form.submit_lookup(class="btn btn-cyber w-100") }}
+    </div>
+  </form>
+  {% if ssl_result %}
+  <div class="mt-4">
+    <h4>Resultado de analisis</h4>
+    <dl class="row">
+      <dt class="col-sm-4">Disponibilidad HTTPS</dt>
+      <dd class="col-sm-8">{{ 'Sí' if ssl_result.https_available else 'No' }}</dd>
+      <dt class="col-sm-4">Redirección HTTP a HTTPS</dt>
+      <dd class="col-sm-8">{{ 'Sí' if ssl_result.http_to_https_redirect else 'No' }}</dd>
+      <dt class="col-sm-4">Emitido por</dt>
+      <dd class="col-sm-8">{{ ssl_result.issuer }}</dd>
+      <dt class="col-sm-4">Válido hasta</dt>
+      <dd class="col-sm-8">{{ ssl_result.expires_at or '-' }}</dd>
+      <dt class="col-sm-4">Expirado</dt>
+      <dd class="col-sm-8">{{ 'Sí' if ssl_result.expired else 'No' }}</dd>
+      <dt class="col-sm-4">Puntaje</dt>
+      <dd class="col-sm-8">{{ ssl_result.score }}</dd>
+      <dt class="col-sm-4">Error</dt>
+      <dd class="col-sm-8">{{ ssl_result.error or 'Ninguno' }}</dd>
+    </dl>
+  </div>
+  {% endif %}
+</section>
+
+<section class="glass-panel animate-in delay-3">
+  <div class="panel-heading">
+    <span class="eyebrow">Inventario SSL</span>
+    <h2>Certificados SSL monitoreados</h2>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-dark table-striped">
+      <thead>
+        <tr>
+          <th>Host</th>
+          <th>Activo desde</th>
+          <th>SSL habilitado</th>
+          <th>Exposición</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for site in certificates[:12] %}
+        <tr>
+          <td>{{ site.domain or site.host }}</td>
+          <td>{{ site.created_at.strftime('%Y-%m-%d') if site.created_at else '-' }}</td>
+          <td>{{ 'Sí' if site.ssl_enabled else 'No' }}</td>
+          <td>{{ site.exposure or 'N/A' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">No hay certificados SSL monitoreados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -220,6 +220,13 @@ class VirusTotalSettingsForm(FlaskForm):
     submit_vt_settings = SubmitField("Guardar VirusTotal")
 
 
+class ApiAccessForm(FlaskForm):
+    """Manage API token access for REST endpoints."""
+
+    api_token = StringField("Token API", validators=[Optional(), Length(max=255)])
+    submit_api_token = SubmitField("Actualizar token")
+
+
 class VirusTotalLookupForm(FlaskForm):
     """Run a VirusTotal reputation lookup."""
 

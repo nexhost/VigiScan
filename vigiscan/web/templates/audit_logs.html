@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Registro de Auditoría - VigiScan{% endblock %}
+
+{% block content %}
+<section class="hero-panel glass-panel animate-in">
+  <div>
+    <span class="eyebrow">Seguridad</span>
+    <h1>Registro de auditoría</h1>
+    <p>Registro de eventos de seguridad, accesos y cambios importantes.</p>
+  </div>
+</section>
+
+<section class="glass-panel animate-in delay-1">
+  <div class="table-responsive">
+    <table class="table table-dark table-striped">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>Acción</th>
+          <th>Detalle</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else '-' }}</td>
+          <td>{{ log.username or 'Sistema' }}</td>
+          <td>{{ log.event_type }}</td>
+          <td>{{ log.details }}</td>
+          <td>{{ log.ip_address or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">No hay registros de auditoría.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
