@@ -1,0 +1,12 @@
+.env
+.git/
+.svn/
+server-status
+admin/
+login/
+backup/
+backups/
+uploads/
+private/
+config.php
+debug/

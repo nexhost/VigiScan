@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from vigiscan.modules.pdf_report import PDFReportUnavailable
+from vigiscan.modules.pdf_report import PDFReportUnavailable, generate_pdf_from_html
 from vigiscan.modules.dns_lookup import DomainLookupResult
 from vigiscan.modules.screenshot import ScreenshotResult
 from vigiscan.web.app import create_app
@@ -137,6 +137,35 @@ def fake_report(target_url: str, **kwargs):
                     }
                 ],
             },
+            "web_fuzzing": {
+                "module": "web_fuzzing",
+                "ok": True,
+                "discovered_subdomains": 1,
+                "discovered_paths": 1,
+                "subdomains": [
+                    {
+                        "host": "api.example.com",
+                        "url": "https://api.example.com/",
+                        "resolved": True,
+                        "ips": ["203.0.113.10"],
+                        "status_code": 200,
+                        "status": "Resuelto",
+                        "error": None,
+                    }
+                ],
+                "hidden_paths": [
+                    {
+                        "path": "admin/",
+                        "url": "https://example.com/admin/",
+                        "discovered": True,
+                        "status_code": 403,
+                        "content_type": "text/html",
+                        "content_length": 128,
+                        "evidence": "La ruta respondio con HTTP 403.",
+                        "error": None,
+                    }
+                ],
+            },
             "cve_checker": {
                 "matches": [
                     {
@@ -189,6 +218,8 @@ def test_admin_can_login_and_view_dashboard(client):
     assert b"IOC Center" in response.data
     assert b"Inteligencia de amenazas / VirusTotal" in response.data
     assert b"OWASP Top 10" in response.data
+    assert b"Mapa SOC de exposicion" in response.data
+    assert b"Republica Dominicana" in response.data
     assert b"Configuracion" in response.data
     assert b"Mapa de ciberamenazas" in response.data
 
@@ -276,7 +307,22 @@ def test_threat_map_page_loads_demo_view(client):
 
     assert response.status_code == 200
     assert b"Mapa de ciberamenazas" in response.data
-    assert b"Visualizacion demostrativa" in response.data
+    assert b"Amenazas LatAm" in response.data
+    assert b"Amenazas RD" in response.data
+    assert b"Republica Dominicana" in response.data
+    assert b"<iframe" not in response.data
+
+
+def test_threat_stats_api_returns_regional_indicators(client):
+    login(client)
+    response = client.get("/api/threat-stats")
+
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["latam_total"] >= payload["dominican_total"]
+    assert payload["dominican_rate"] > 0
+    assert any(country["code"] == "DO" for country in payload["countries"])
 
 
 def test_infrastructure_host_crud_page(client, app):
@@ -503,6 +549,17 @@ def test_reports_show_detailed_cve_metadata(client, monkeypatch):
     assert b"Sensitive file disclosure risk." in response.data
 
 
+def test_scan_detail_shows_web_fuzzing_results(client, monkeypatch):
+    create_completed_scan(client, monkeypatch)
+    response = client.get("/scans/1")
+
+    assert response.status_code == 200
+    assert b"Subdominios descubiertos" in response.data
+    assert b"Directorios ocultos" in response.data
+    assert b"api.example.com" in response.data
+    assert b"https://example.com/admin/" in response.data
+
+
 def test_dashboard_and_reports_filter_by_owasp_category(client, monkeypatch):
     create_completed_scan(client, monkeypatch)
 
@@ -576,6 +633,10 @@ def test_scan_pdf_route_generates_file_when_backend_available(client, app, monke
     def fake_generate_pdf(html, output_path, *, base_url=None):
         assert "Informe Ejecutivo de Seguridad Web" in html
         assert "Desarrollado por Kendry Rosario" in html
+        assert "<style>" in html
+        assert ".report-header" in html
+        assert "header-logo" in html
+        assert base_url
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"%PDF-1.4\n%fake\n")
@@ -587,6 +648,19 @@ def test_scan_pdf_route_generates_file_when_backend_available(client, app, monke
     assert response.status_code == 200
     assert response.mimetype == "application/pdf"
     assert b"%PDF-1.4" in response.data
+    with app.app_context():
+        pdf_files = list((Path(app.config["VIGISCAN_REPORT_DIR"]) / "pdf").glob("*.pdf"))
+        assert pdf_files
+
+
+def test_scan_pdf_route_generates_with_builtin_fallback(client, app, monkeypatch):
+    create_completed_scan(client, monkeypatch)
+
+    response = client.get("/reports/1/pdf")
+
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.data.startswith(b"%PDF-1.4")
     with app.app_context():
         pdf_files = list((Path(app.config["VIGISCAN_REPORT_DIR"]) / "pdf").glob("*.pdf"))
         assert pdf_files
@@ -610,6 +684,27 @@ def test_pdf_template_exists():
     assert Path("vigiscan/web/static/css/pdf.css").exists()
 
 
+def test_builtin_pdf_fallback_generates_downloadable_file(tmp_path):
+    output_path = tmp_path / "report.pdf"
+    html = """
+    <h1>Informe Ejecutivo de Seguridad Web</h1>
+    <span>URL objetivo</span><strong>https://example.com</strong>
+    <span>Organizacion</span><strong>VigiScan</strong>
+    <span>Fecha local</span><strong>2026-06-07</strong>
+    <span>Clasificacion</span><strong>Alto</strong>
+    <span>Risk Score</span><strong>73</strong>
+    <span>Criticos</span><strong>1</strong>
+    <span>Altos</span><strong>2</strong>
+    <span>Medios</span><strong>3</strong>
+    <span>Bajos</span><strong>4</strong>
+    """
+
+    pdf_path = generate_pdf_from_html(html, output_path)
+
+    assert pdf_path == output_path
+    assert output_path.read_bytes().startswith(b"%PDF-1.4")
+
+
 def test_scan_form_rejects_non_http_urls(client):
     login(client)
     response = client.post(
@@ -620,6 +715,14 @@ def test_scan_form_rejects_non_http_urls(client):
 
     assert response.status_code == 200
     assert b"http://" in response.data
+
+
+def test_new_scan_form_includes_web_fuzzing_option(client):
+    login(client)
+    response = client.get("/scans/new")
+
+    assert response.status_code == 200
+    assert b"Fuzzing web" in response.data
 
 
 def test_owasp_module_requires_login_and_shows_categories(client):

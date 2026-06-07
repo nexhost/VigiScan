@@ -166,6 +166,48 @@
     </div>
   </div>
   <div class="col-lg-6">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading"><span>Subdominios descubiertos</span><small>Fuzzing web</small></div>
+      <div class="table-responsive cyber-table-wrap">
+        <table class="table cyber-table mb-0 align-middle">
+          <thead><tr><th>Host</th><th>IPs</th><th>HTTP</th></tr></thead>
+          <tbody>
+            {% for subdomain in findings.fuzzing_subdomains %}
+            <tr>
+              <td class="text-break">{{ subdomain.host }}</td>
+              <td class="text-break">{{ (subdomain.ips or [])|join(", ") or "-" }}</td>
+              <td>{{ subdomain.status_code or "-" }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-secondary">Sin subdominios resueltos por fuzzing.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading"><span>Directorios ocultos</span><small>Fuzzing web</small></div>
+      <div class="table-responsive cyber-table-wrap">
+        <table class="table cyber-table mb-0 align-middle">
+          <thead><tr><th>Ruta</th><th>HTTP</th><th>URL</th></tr></thead>
+          <tbody>
+            {% for path in findings.fuzzing_hidden_paths %}
+            <tr>
+              <td>{{ path.path }}</td>
+              <td>{{ path.status_code or "-" }}</td>
+              <td class="text-break">{{ path.url }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-secondary">Sin directorios ocultos descubiertos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
     <div class="glass-panel h-100 animate-in delay-3">
       <div class="panel-heading"><span>CVE encontradas</span></div>
       <div class="cve-stack">

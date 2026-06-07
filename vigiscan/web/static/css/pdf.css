@@ -1,6 +1,6 @@
 @page {
   size: A4;
-  margin: 18mm 14mm 18mm;
+  margin: 28mm 14mm 18mm;
 
   @bottom-center {
     content: "VigiScan - Desarrollado por Kendry Rosario - Pagina " counter(page) " de " counter(pages);
@@ -14,7 +14,7 @@
 }
 
 body {
-  background: #f4f7fa;
+  background: #eef3f8;
   color: #0f172a;
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   font-size: 12px;
@@ -26,10 +26,50 @@ body {
   display: none;
 }
 
+.report-header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #d7e3f4;
+  display: flex;
+  gap: 10px;
+  height: 18mm;
+  left: 0;
+  padding: 0 14mm;
+  position: fixed;
+  right: 0;
+  top: -22mm;
+}
+
+.header-logo {
+  height: 28px;
+  object-fit: contain;
+  width: 96px;
+}
+
+.report-header div {
+  display: grid;
+  flex: 1;
+  gap: 1px;
+}
+
+.report-header strong {
+  color: #0f172a;
+  font-size: 11px;
+}
+
+.report-header span,
+.report-header em {
+  color: #64748b;
+  font-size: 9px;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
 section {
   background: #ffffff;
   border: 1px solid #e0e8f2;
   border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
   margin: 0 0 12px;
   padding: 14px;
   page-break-inside: avoid;
@@ -37,6 +77,7 @@ section {
 
 .cover {
   background:
+    radial-gradient(circle at 82% 10%, rgba(25, 197, 194, 0.16), transparent 28%),
     linear-gradient(90deg, #19c5c2 0 8px, transparent 8px),
     linear-gradient(135deg, #ffffff, #f8fbfd);
   min-height: 240mm;
@@ -168,6 +209,22 @@ p {
   font-size: 24px;
 }
 
+.summary-grid article:first-child strong {
+  color: #dc2626;
+}
+
+.summary-grid article:nth-child(2) strong {
+  color: #ea580c;
+}
+
+.summary-grid article:nth-child(3) strong {
+  color: #ca8a04;
+}
+
+.summary-grid article:nth-child(4) strong {
+  color: #16a34a;
+}
+
 .recommendation {
   background: #effefe;
   border-left: 4px solid #19c5c2;
@@ -184,6 +241,11 @@ p {
   border: 1px solid #e0e8f2;
   border-radius: 8px;
   padding: 12px;
+}
+
+.chart-card h3 {
+  border-bottom: 1px solid #e0e8f2;
+  padding-bottom: 6px;
 }
 
 .bar-row {
@@ -205,6 +267,18 @@ p {
   background: linear-gradient(90deg, #19c5c2, #1597e5);
   display: block;
   height: 100%;
+}
+
+.bar-row:nth-child(2) i {
+  background: linear-gradient(90deg, #dc2626, #f97316);
+}
+
+.bar-row:nth-child(3) i {
+  background: linear-gradient(90deg, #f59e0b, #facc15);
+}
+
+.bar-row:nth-child(4) i {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
 }
 
 .cve-card {

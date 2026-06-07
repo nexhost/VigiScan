@@ -28,7 +28,7 @@
         {% for connector in connector_status %}
         <div class="list-group-item">
           <strong>{{ connector.name }}</strong>
-          <span class="badge bg-secondary ms-2">{{ connector.status }}</span>
+          <span class="badge badge-muted ms-2">{{ connector.status }}</span>
           <p class="mb-0">{{ connector.description }}</p>
         </div>
         {% endfor %}

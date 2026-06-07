@@ -3,9 +3,17 @@
 <head>
   <meta charset="utf-8">
   <title>Informe Ejecutivo de Seguridad Web - VigiScan</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/pdf.css') }}">
+  <style>{{ pdf_css|safe }}</style>
 </head>
 <body>
+  <header class="report-header">
+    <img class="header-logo" src="{{ logo_url }}" alt="VigiScan">
+    <div>
+      <strong>Informe Ejecutivo de Seguridad Web</strong>
+      <span>{{ scan.target_url }}</span>
+    </div>
+    <em>{{ generated_local }}</em>
+  </header>
   <footer class="page-footer">
     VigiScan | Desarrollado por Kendry Rosario | {{ generated_local }}
   </footer>

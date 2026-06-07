@@ -62,6 +62,44 @@
     });
   });
 
+  document.querySelectorAll("[data-threat-map-frame]").forEach((frame) => {
+    const shell = frame.closest(".threat-map-embed-shell");
+    let loaded = false;
+    frame.addEventListener("load", () => {
+      loaded = true;
+      shell?.classList.remove("is-blocked");
+    });
+    window.setTimeout(() => {
+      if (!loaded) {
+        shell?.classList.add("is-blocked");
+      }
+    }, 5000);
+  });
+
+  const threatStatNodes = document.querySelectorAll("[data-threat-stat]");
+  if (threatStatNodes.length) {
+    const updateThreatStats = async () => {
+      try {
+        const response = await fetch("/api/threat-stats", {
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        threatStatNodes.forEach((node) => {
+          const key = node.dataset.threatStat;
+          if (key && Object.hasOwn(data, key)) {
+            node.textContent = data[key];
+          }
+        });
+      } catch {
+        // Keep the server-rendered values if the live update is unavailable.
+      }
+    };
+    window.setInterval(updateThreatStats, 30000);
+  }
+
   document.querySelectorAll("[data-count]").forEach((node) => {
     const target = Number(node.dataset.count);
     if (!Number.isFinite(target)) {

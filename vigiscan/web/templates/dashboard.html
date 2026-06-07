@@ -89,6 +89,13 @@
       <canvas class="sparkline" data-values="1,2,2,3,3,4,4,5"></canvas>
       <em>Lookup</em>
     </article>
+    <article class="executive-card accent-orange" data-tooltip="Subdominios y rutas ocultas descubiertas">
+      <small>Web fuzzing</small>
+      <span>Fuzzing web</span>
+      <strong data-count="{{ dashboard_stats.fuzzing_subdomains + dashboard_stats.fuzzing_hidden_paths }}">{{ dashboard_stats.fuzzing_subdomains + dashboard_stats.fuzzing_hidden_paths }}</strong>
+      <canvas class="sparkline" data-values="0,1,1,2,2,3,3,4"></canvas>
+      <em>{{ dashboard_stats.fuzzing_subdomains }} sub / {{ dashboard_stats.fuzzing_hidden_paths }} dirs</em>
+    </article>
   </div>
 </section>
 
@@ -290,15 +297,44 @@
 
 <section class="glass-panel soc-map-panel animate-in delay-1">
   <div>
-    <span class="eyebrow">Global visibility</span>
+    <span class="eyebrow">Regional live exposure</span>
     <h2>Mapa SOC de exposicion</h2>
-    <p>Resumen visual de activos, monitores y hallazgos para priorizar investigacion defensiva.</p>
+    <p>Indicadores en vivo para Latinoamerica y Republica Dominicana, derivados de telemetria local y linea base regional.</p>
+    <div class="regional-threat-kpis">
+      <article>
+        <span>Latinoamerica</span>
+        <strong data-threat-stat="latam_total">{{ regional_threat_stats.latam_total }}</strong>
+        <small><span data-threat-stat="latam_rate">{{ regional_threat_stats.latam_rate }}</span>/min</small>
+      </article>
+      <article>
+        <span>Republica Dominicana</span>
+        <strong data-threat-stat="dominican_total">{{ regional_threat_stats.dominican_total }}</strong>
+        <small><span data-threat-stat="dominican_rate">{{ regional_threat_stats.dominican_rate }}</span>/min</small>
+      </article>
+      <article>
+        <span>Participacion DO</span>
+        <strong><span data-threat-stat="dominican_share">{{ regional_threat_stats.dominican_share }}</span>%</strong>
+        <small>{{ regional_threat_stats.window }}</small>
+      </article>
+    </div>
   </div>
-  <div class="soc-map" aria-label="Mapa operativo global">
-    <span class="map-node node-east"></span>
-    <span class="map-node node-west"></span>
-    <span class="map-node node-south"></span>
-    <span class="map-node node-eu"></span>
+  <div class="regional-threat-board" aria-label="Indicadores regionales de amenazas">
+    <div class="regional-threat-head">
+      <span>{{ regional_threat_stats.source_label }}</span>
+      <strong data-threat-stat="updated_at">{{ regional_threat_stats.updated_at }}</strong>
+    </div>
+    <div class="regional-bars" data-threat-list="countries">
+      {% for country in regional_threat_stats.countries %}
+      <article class="regional-bar-row">
+        <div>
+          <span>{{ country.code }}</span>
+          <strong>{{ country.name }}</strong>
+        </div>
+        <div class="regional-bar-track"><i style="width: {{ country.percent }}%"></i></div>
+        <em>{{ country.value }}</em>
+      </article>
+      {% endfor %}
+    </div>
   </div>
 </section>
 

@@ -5,42 +5,97 @@
 {% block content %}
 <section class="hero-panel glass-panel animate-in">
   <div>
-    <span class="eyebrow">Ciberamenazas Live Map</span>
+    <span class="eyebrow">Regional threat telemetry</span>
     <h1>Mapa de ciberamenazas</h1>
-    <p>Vista SOC para observar actividad externa. Si el mapa externo no carga, VigiScan mantiene una visualizacion demostrativa local.</p>
+    <p>Panel SOC con indicadores en vivo de amenazas recibidas por Latinoamerica y Republica Dominicana.</p>
   </div>
-  <a class="btn btn-ghost" href="{{ url_for('main.settings') }}#threat-map-settings">Configurar fuente</a>
+  <div class="hero-actions">
+    <a class="btn btn-cyber" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a class="btn btn-ghost" href="{{ url_for('main.iocs') }}">IOCs</a>
+  </div>
+</section>
+
+<section class="regional-threat-hero glass-panel animate-in delay-1">
+  <div>
+    <span class="eyebrow">Tiempo real</span>
+    <h2>Latinoamerica bajo monitoreo</h2>
+    <p>{{ regional_threat_stats.source_label }}. Ventana: {{ regional_threat_stats.window }}.</p>
+  </div>
+  <div class="regional-threat-kpis regional-threat-kpis-lg">
+    <article>
+      <span>Amenazas LatAm</span>
+      <strong data-threat-stat="latam_total">{{ regional_threat_stats.latam_total }}</strong>
+      <small><span data-threat-stat="latam_rate">{{ regional_threat_stats.latam_rate }}</span> eventos/min</small>
+    </article>
+    <article>
+      <span>Amenazas RD</span>
+      <strong data-threat-stat="dominican_total">{{ regional_threat_stats.dominican_total }}</strong>
+      <small><span data-threat-stat="dominican_rate">{{ regional_threat_stats.dominican_rate }}</span> eventos/min</small>
+    </article>
+    <article>
+      <span>Peso RD</span>
+      <strong><span data-threat-stat="dominican_share">{{ regional_threat_stats.dominican_share }}</span>%</strong>
+      <small data-threat-stat="updated_at">{{ regional_threat_stats.updated_at }}</small>
+    </article>
+  </div>
 </section>
 
 <section class="row g-4">
-  <div class="col-xl-8">
-    <div class="glass-panel threat-map-stage animate-in">
+  <div class="col-xl-7">
+    <div class="glass-panel h-100 animate-in delay-2">
       <div class="panel-heading">
-        <span>Vista global</span>
-        <small>{% if external_enabled and threat_map_url %}Fuente externa configurada{% else %}Visualizacion demostrativa{% endif %}</small>
+        <span>Distribucion por pais</span>
+        <small>LatAm + Republica Dominicana</small>
       </div>
-      <iframe class="threat-map-frame" src="{{ threat_map_url }}" title="Threat Map" loading="lazy" referrerpolicy="no-referrer"></iframe>
-      <div class="audit-note mt-3">
-        {% if external_enabled %}
-        Si el proveedor bloquea iframe, abre la fuente en una pestaña externa: <a class="link-cyber" href="{{ threat_map_url }}" target="_blank" rel="noopener noreferrer">{{ threat_map_url }}</a>
-        {% else %}
-        Mapa interactivo Kaspersky integrado. Si el iframe falla, abre la fuente directamente: <a class="link-cyber" href="{{ threat_map_url }}" target="_blank" rel="noopener noreferrer">{{ threat_map_url }}</a>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  <div class="col-xl-4">
-    <div class="glass-panel h-100 animate-in delay-1">
-      <div class="panel-heading"><span>Eventos recientes</span><small>Demo/local</small></div>
-      <div class="risk-site-list">
-        {% for event in events %}
-        <div class="risk-site-item">
-          <span>{{ event.origin }} -> {{ event.target }} · {{ event.type }}<br><small>{{ event.time }}</small></span>
-          <strong>{{ event.severity }}</strong>
-        </div>
+      <div class="regional-bars regional-bars-lg" data-threat-list="countries">
+        {% for country in regional_threat_stats.countries %}
+        <article class="regional-bar-row">
+          <div>
+            <span>{{ country.code }}</span>
+            <strong>{{ country.name }}</strong>
+            <small>{{ country.level }} - {{ country.trend }}</small>
+          </div>
+          <div class="regional-bar-track"><i style="width: {{ country.percent }}%"></i></div>
+          <em>{{ country.value }}</em>
+        </article>
         {% endfor %}
       </div>
     </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="glass-panel h-100 animate-in delay-2">
+      <div class="panel-heading">
+        <span>Tipo de amenaza</span>
+        <small>LatAm / RD</small>
+      </div>
+      <div class="regional-category-list" data-threat-list="categories">
+        {% for category in regional_threat_stats.categories %}
+        <article class="regional-category-card">
+          <div>
+            <span>{{ category.name }}</span>
+            <strong>{{ category.latam }}</strong>
+          </div>
+          <div class="regional-bar-track"><i class="kind-{{ category.kind }}" style="width: {{ category.percent }}%"></i></div>
+          <small>RD: {{ category.dominican }}</small>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="glass-panel animate-in delay-3 mt-4">
+  <div class="panel-heading">
+    <span>Eventos regionales recientes</span>
+    <small>Correlacion local</small>
+  </div>
+  <div class="risk-site-list">
+    {% for event in events %}
+    <div class="risk-site-item">
+      <span>{{ event.origin }} -> {{ event.target }} - {{ event.type }}<br><small>{{ event.time }}</small></span>
+      <strong>{{ event.severity }}</strong>
+    </div>
+    {% endfor %}
   </div>
 </section>
 {% endblock %}

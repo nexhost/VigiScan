@@ -37,6 +37,7 @@ class ScanForm(FlaskForm):
     enable_screenshot = BooleanField("Screenshot", default=True)
     enable_owasp_mapping = BooleanField("OWASP mapping", default=True)
     enable_cve_lookup = BooleanField("CVE lookup", default=True)
+    enable_web_fuzzing = BooleanField("Fuzzing web", default=True)
     submit = SubmitField("Iniciar escaneo")
 
     def validate_target_url(self, field: URLField) -> None:
